@@ -1,0 +1,52 @@
+[
+  {
+    "id": "req-1789412275140-04i42",
+    "email": "intruder@external.com",
+    "name": "Test User",
+    "requestedAt": "2026-09-14T18:57:55.140Z",
+    "expiresAt": "2026-09-14T19:07:55.140Z",
+    "status": "rejected",
+    "reviewedBy": "freeuser13012026@gmail.com",
+    "reviewedAt": "2026-09-14T18:57:58.831Z"
+  },
+  {
+    "id": "req-1789412012748-dzfhk",
+    "email": "user@gmail.com",
+    "name": "user",
+    "requestedAt": "2026-09-14T18:53:32.748Z",
+    "expiresAt": "2026-09-14T19:03:32.748Z",
+    "status": "accepted",
+    "reviewedBy": "pratikpanda2006@gmail.com",
+    "reviewedAt": "2026-09-14T18:57:40.944Z"
+  },
+  {
+    "id": "req-1789411830609-kfsab",
+    "email": "student@nexup.io",
+    "name": "student",
+    "requestedAt": "2026-09-14T18:50:30.609Z",
+    "expiresAt": "2026-09-14T19:00:30.609Z",
+    "status": "rejected",
+    "reviewedBy": "pratikpanda2006@gmail.com",
+    "reviewedAt": "2026-09-14T18:57:35.112Z"
+  },
+  {
+    "id": "req-1789411066973-lks75",
+    "email": "freeuser13012026@gmail.com",
+    "name": "Alex Rivera",
+    "requestedAt": "2026-09-14T18:37:46.973Z",
+    "expiresAt": "2026-09-14T18:47:46.973Z",
+    "status": "accepted",
+    "reviewedBy": "freeuser13012026@gmail.com",
+    "reviewedAt": "2026-09-14T18:38:09.356Z"
+  },
+  {
+    "id": "req-1789410951291-rxwcq",
+    "email": "freeuser13012026@gmail.com",
+    "name": "Alex Rivera",
+    "requestedAt": "2026-09-14T18:35:51.291Z",
+    "expiresAt": "2026-09-14T18:45:51.291Z",
+    "status": "rejected",
+    "reviewedBy": "freeuser13012026@gmail.com",
+    "reviewedAt": "2026-09-14T18:36:15.258Z"
+  }
+]

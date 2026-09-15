@@ -52,15 +52,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
 
-  // Background animated gradient state for dynamic glowing atmosphere (matching Image 2)
-  const [ambientHue, setAmbientHue] = useState(0);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAmbientHue((prev) => (prev + 1) % 360);
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
 
   // When clicking role buttons on Welcome screen:
   const handleSelectRole = (role: 'student' | 'admin') => {
@@ -198,13 +190,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-between text-slate-100 relative overflow-hidden bg-slate-950">
-      {/* DYNAMIC BACKGROUND COLOR ATMOSPHERE (as requested in user prompt & matching Image 2) */}
+      {/* Refined Executive Ambient Mesh Backdrop */}
       <div 
-        className="absolute inset-0 pointer-events-none transition-all duration-1000 ease-in-out opacity-40"
+        className="absolute inset-0 pointer-events-none opacity-50"
         style={{
-          background: `radial-gradient(circle 600px at 50% 40%, rgba(${Math.sin(ambientHue * 0.05) * 30 + 50}, ${Math.cos(ambientHue * 0.03) * 30 + 60}, 180, 0.25), transparent 70%),
-                       radial-gradient(circle 450px at 20% 80%, rgba(139, 92, 246, 0.15), transparent 60%),
-                       radial-gradient(circle 500px at 80% 20%, rgba(56, 189, 248, 0.15), transparent 60%)`
+          background: `radial-gradient(circle 700px at 50% 35%, rgba(59, 130, 246, 0.12), transparent 70%),
+                       radial-gradient(circle 500px at 15% 85%, rgba(99, 102, 241, 0.10), transparent 60%),
+                       radial-gradient(circle 600px at 85% 15%, rgba(14, 165, 233, 0.08), transparent 60%)`
         }}
       />
 
@@ -219,50 +211,62 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* =========================================================================
           SCREEN 1: WELCOME SCREEN (Directly matching user image 2 & image 1)
-          "this is logo when dynamic bg coor and all and options should be started 
-           this should come first then it should be like this sign as user admin"
          ========================================================================= */}
       {step === 'welcome' && (
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-16 text-center max-w-2xl mx-auto w-full animate-in fade-in duration-500">
-          {/* Centered Logo with Glowing Halo (Image 1 & Image 2) */}
+          {/* Centered Logo with Glowing Halo */}
           <div className="relative mb-6 group">
-            {/* Glowing background halo around logo */}
-            <div className="absolute -inset-8 bg-blue-500/25 rounded-full blur-3xl group-hover:bg-blue-400/35 transition-all duration-700 pointer-events-none" />
-            
-            <div className="relative transform hover:scale-105 transition-transform duration-300">
+            <div className="absolute -inset-8 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-400/30 transition-all duration-700 pointer-events-none" />
+            <div className="relative transform hover:scale-[1.02] transition-transform duration-300">
               <NexUpLogo size="hero" showTagline={true} glow={true} />
             </div>
           </div>
 
-          {/* Subtitle / Prompt matching Image 2 */}
+          {/* Subtitle / Prompt */}
           <div className="mt-4 mb-8">
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
               Select Your Access Mode
             </h2>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-md mx-auto">
-              Choose how you would like to enter the NexUP opportunity intelligence network.
+            <p className="text-xs sm:text-sm text-slate-400 mt-1.5 max-w-md mx-auto leading-relaxed">
+              Choose your role to enter the NexUP opportunity intelligence network.
             </p>
           </div>
 
-          {/* TWO PRIMARY BUTTONS matching user prompt:
-              "options should be started this should come first then it should be like this sign as user admin" */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full max-w-md mx-auto">
+          {/* TWO PRIMARY BUTTONS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full max-w-lg mx-auto">
             {/* 1. Sign in as Student */}
             <button
               onClick={() => handleSelectRole('student')}
-              className="w-full sm:w-1/2 py-3.5 px-6 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white font-semibold text-sm border border-slate-700 hover:border-blue-500 shadow-lg shadow-black/40 hover:shadow-blue-500/20 transition-all flex items-center justify-center space-x-2.5 group"
+              className="py-4 px-5 rounded-2xl bg-slate-900/90 hover:bg-slate-850 text-white font-medium text-sm border border-slate-800 hover:border-blue-500/80 shadow-xl shadow-black/40 hover:shadow-blue-500/10 transition-all flex flex-col items-start space-y-1.5 group cursor-pointer text-left"
             >
-              <User className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
-              <span>Sign In as Student</span>
+              <div className="flex items-center space-x-2 text-blue-400 font-semibold text-sm">
+                <User className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <span>Student Access</span>
+              </div>
+              <span className="text-xs text-slate-400 font-normal">Explore hackathons, internships & research</span>
             </button>
 
             {/* 2. Sign in as Admin */}
             <button
               onClick={() => handleSelectRole('admin')}
-              className="w-full sm:w-1/2 py-3.5 px-6 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white font-semibold text-sm border border-slate-700 hover:border-rose-500 shadow-lg shadow-black/40 hover:shadow-rose-500/20 transition-all flex items-center justify-center space-x-2.5 group"
+              className="py-4 px-5 rounded-2xl bg-slate-900/90 hover:bg-slate-850 text-white font-medium text-sm border border-slate-800 hover:border-rose-500/80 shadow-xl shadow-black/40 hover:shadow-rose-500/10 transition-all flex flex-col items-start space-y-1.5 group cursor-pointer text-left"
             >
-              <ShieldCheck className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
-              <span>Sign In as Admin</span>
+              <div className="flex items-center space-x-2 text-rose-400 font-semibold text-sm">
+                <ShieldCheck className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <span>Admin Console</span>
+              </div>
+              <span className="text-xs text-slate-400 font-normal">Manage listings, AI parser & authorizations</span>
+            </button>
+          </div>
+
+          {/* Quick guest explorer link */}
+          <div className="mt-8 pt-4 border-t border-slate-850/80 w-full max-w-xs mx-auto">
+            <button
+              onClick={() => onExplore()}
+              className="inline-flex items-center space-x-1.5 text-xs text-slate-400 hover:text-blue-400 transition-colors cursor-pointer"
+            >
+              <span>Browse Live Opportunity Catalog</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -343,7 +347,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="e.g. PRATIK"
-                      className="w-full pl-10 pr-4 py-3 bg-[#EAF1FB] text-slate-900 font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/80 text-white font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                     />
                   </div>
                 </div>
@@ -363,7 +367,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="pratikpanda2006@gmail.com"
-                      className="w-full pl-10 pr-4 py-3 bg-[#EAF1FB] text-slate-900 font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/80 text-white font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                     />
                   </div>
                 </div>
@@ -383,12 +387,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="w-full pl-10 pr-10 py-3 bg-[#EAF1FB] text-slate-900 font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      className="w-full pl-10 pr-10 py-2.5 bg-slate-950/80 border border-slate-700/80 text-white font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-600 hover:text-slate-900 cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -418,7 +422,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="pt-3">
                   <button
                     type="submit"
-                    className="w-full py-3.5 px-6 rounded-full bg-white hover:bg-slate-100 text-slate-900 font-bold text-sm shadow-xl hover:shadow-2xl transition-all cursor-pointer transform active:scale-[0.99] flex items-center justify-center space-x-2"
+                    className="w-full py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/20 transition-all cursor-pointer transform active:scale-[0.99] flex items-center justify-center space-x-2"
                   >
                     <span>{isSignUpMode ? 'Create Account & Continue' : 'Sign In'}</span>
                     <ArrowRight className="w-4 h-4" />

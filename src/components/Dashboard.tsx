@@ -123,150 +123,185 @@ export const Dashboard: React.FC<DashboardProps> = ({
         )}
 
         {/* Centered Clean Welcome Greeting */}
-        <div className="pt-2 sm:pt-4 pb-4 sm:pb-6 text-center">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white">
-            Welcome back, {currentUser?.name?.toUpperCase() || 'PRATIK'}
+        <div className="pt-3 sm:pt-5 pb-6 sm:pb-8 text-center max-w-3xl mx-auto">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-900/90 border border-slate-800 text-[11px] font-mono font-medium text-slate-400 mb-3.5 shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>OPPORTUNITY INTELLIGENCE · LIVE FEED</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white">
+            Welcome back, {currentUser?.name ? currentUser.name.split(' ')[0] : 'Pratik'}
           </h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-xl mx-auto">
+            Discover vetted hackathons, frontier engineering internships, and funded research fellowships.
+          </p>
         </div>
 
-        {/* Full-Space Vibrant Cards Grid */}
+        {/* Full-Space Professional Cards Grid */}
         <div
           className={`grid grid-cols-1 ${
             currentUser?.role === 'admin'
               ? 'sm:grid-cols-2 lg:grid-cols-4'
               : 'md:grid-cols-3'
-          } gap-6 sm:gap-8 w-full my-auto flex-1 items-stretch`}
+          } gap-5 sm:gap-6 w-full my-auto flex-1 items-stretch`}
         >
-
-          {/* CARD 1: TECH INTERNSHIPS (matching purple/blue gradient card) */}
+          {/* CARD 1: TECH INTERNSHIPS */}
           <div
             onClick={() => onNavigateTab('internships', 'table')}
-            className="relative overflow-hidden rounded-[32px] p-8 sm:p-9 lg:p-10 min-h-[340px] sm:min-h-[380px] lg:min-h-[420px] flex flex-col justify-between cursor-pointer group transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/35 select-none border border-white/15"
-            style={{
-              background:
-                'linear-gradient(135deg, #5C53DF 0%, #6F56E8 50%, #8847E0 100%)'
-            }}
+            className="relative overflow-hidden rounded-2xl p-7 sm:p-8 min-h-[320px] sm:min-h-[360px] flex flex-col justify-between cursor-pointer group transition-all duration-300 bg-slate-900/95 hover:bg-slate-900 border border-slate-800/90 hover:border-indigo-500/60 shadow-xl hover:shadow-2xl hover:shadow-indigo-500/10 select-none"
           >
-            {/* Top row: Translucent circular icon badge */}
-            <div className="flex items-start justify-between">
-              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 shadow-inner group-hover:scale-105 transition-transform">
-                <Briefcase className="w-10 h-10 sm:w-11 sm:h-11" />
+            {/* Ambient accent top light */}
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-600 opacity-70 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/20 transition-all duration-500" />
+
+            {/* Top row */}
+            <div className="flex items-start justify-between relative z-10">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-950/60 border border-indigo-800/60 flex items-center justify-center text-indigo-400 shadow-inner group-hover:scale-105 group-hover:border-indigo-500/70 transition-all">
+                <Briefcase className="w-7 h-7" />
               </div>
 
-              <span className="text-sm sm:text-base font-mono font-bold px-4 py-2 rounded-full bg-black/30 text-white backdrop-blur-md border border-white/25 shadow-sm">
-                {internActive.length} Active
+              <span className="text-xs font-mono font-semibold px-3 py-1 rounded-full bg-slate-950/80 text-indigo-300 border border-indigo-900/60 shadow-xs">
+                {internActive.length} Active Listings
               </span>
             </div>
 
-            {/* CENTERED Bottom typography */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pt-12 sm:pt-16">
-              <h3 className="text-3xl sm:text-4xl lg:text-[40px] font-black text-white tracking-tight leading-tight">
+            {/* Middle info */}
+            <div className="py-6 relative z-10">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-indigo-400/90 font-semibold mb-1">
+                Industry Opportunities
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
                 Tech Internships
               </h3>
-
-              <p className="text-white/95 font-semibold text-base sm:text-lg mt-2.5 flex items-center space-x-2 group-hover:text-white transition-colors">
-                <span>Tap to explore</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+              <p className="text-xs sm:text-sm text-slate-400 mt-2.5 leading-relaxed line-clamp-3">
+                Competitive software engineering, systems, and AI research roles with verified compensation and housing stipends.
               </p>
+            </div>
+
+            {/* Bottom action */}
+            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-slate-400 group-hover:text-indigo-300 transition-colors relative z-10">
+              <span>Explore directory</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform text-indigo-400" />
             </div>
           </div>
 
-
-          {/* CARD 2: HACKATHONS (matching vibrant orange gradient card) */}
+          {/* CARD 2: HACKATHONS */}
           <div
             onClick={() => onNavigateTab('hackathons', 'table')}
-            className="relative overflow-hidden rounded-[32px] p-8 sm:p-9 lg:p-10 min-h-[340px] sm:min-h-[380px] lg:min-h-[420px] flex flex-col justify-between cursor-pointer group transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-orange-500/35 select-none border border-white/15"
-            style={{
-              background:
-                'linear-gradient(135deg, #FF7A00 0%, #FF8A00 45%, #FF5252 100%)'
-            }}
+            className="relative overflow-hidden rounded-2xl p-7 sm:p-8 min-h-[320px] sm:min-h-[360px] flex flex-col justify-between cursor-pointer group transition-all duration-300 bg-slate-900/95 hover:bg-slate-900 border border-slate-800/90 hover:border-amber-500/60 shadow-xl hover:shadow-2xl hover:shadow-amber-500/10 select-none"
           >
-            <div className="flex items-start justify-between">
-              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 shadow-inner group-hover:scale-105 transition-transform">
-                <Code2 className="w-10 h-10 sm:w-11 sm:h-11" />
+            {/* Ambient accent top light */}
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 opacity-70 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/20 transition-all duration-500" />
+
+            {/* Top row */}
+            <div className="flex items-start justify-between relative z-10">
+              <div className="w-14 h-14 rounded-2xl bg-amber-950/60 border border-amber-800/60 flex items-center justify-center text-amber-400 shadow-inner group-hover:scale-105 group-hover:border-amber-500/70 transition-all">
+                <Code2 className="w-7 h-7" />
               </div>
 
-              <span className="text-sm sm:text-base font-mono font-bold px-4 py-2 rounded-full bg-black/30 text-white backdrop-blur-md border border-white/25 shadow-sm">
-                {hackActive.length} Active
+              <span className="text-xs font-mono font-semibold px-3 py-1 rounded-full bg-slate-950/80 text-amber-300 border border-amber-900/60 shadow-xs">
+                {hackActive.length} Active Challenges
               </span>
             </div>
 
-            {/* CENTERED typography */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pt-12 sm:pt-16">
-              <h3 className="text-3xl sm:text-4xl lg:text-[40px] font-black text-white tracking-tight leading-tight">
+            {/* Middle info */}
+            <div className="py-6 relative z-10">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-amber-400/90 font-semibold mb-1">
+                Global Competitions
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
                 Hackathons
               </h3>
-
-              <p className="text-white/95 font-semibold text-base sm:text-lg mt-2.5 flex items-center space-x-2 group-hover:text-white transition-colors">
-                <span>Tap to explore</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+              <p className="text-xs sm:text-sm text-slate-400 mt-2.5 leading-relaxed line-clamp-3">
+                Build and ship innovative prototypes across AI, Web3, and robotics with ₹5Cr+ prize pools and fast-track incubation.
               </p>
+            </div>
+
+            {/* Bottom action */}
+            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-slate-400 group-hover:text-amber-300 transition-colors relative z-10">
+              <span>Explore competitions</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform text-amber-400" />
             </div>
           </div>
 
-
-          {/* CARD 3: RESEARCH FELLOWSHIPS (matching vibrant magenta/fuchsia gradient card) */}
+          {/* CARD 3: RESEARCH FELLOWSHIPS */}
           <div
             onClick={() => onNavigateTab('research', 'table')}
-            className="relative overflow-hidden rounded-[32px] p-8 sm:p-9 lg:p-10 min-h-[340px] sm:min-h-[380px] lg:min-h-[420px] flex flex-col justify-between cursor-pointer group transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-pink-500/35 select-none border border-white/15"
-            style={{
-              background:
-                'linear-gradient(135deg, #D946EF 0%, #C026D3 50%, #9333EA 100%)'
-            }}
+            className="relative overflow-hidden rounded-2xl p-7 sm:p-8 min-h-[320px] sm:min-h-[360px] flex flex-col justify-between cursor-pointer group transition-all duration-300 bg-slate-900/95 hover:bg-slate-900 border border-slate-800/90 hover:border-violet-500/60 shadow-xl hover:shadow-2xl hover:shadow-violet-500/10 select-none"
           >
-            <div className="flex items-start justify-between">
-              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 shadow-inner group-hover:scale-105 transition-transform">
-                <GraduationCap className="w-10 h-10 sm:w-11 sm:h-11" />
+            {/* Ambient accent top light */}
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-purple-600 opacity-70 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-violet-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-violet-500/20 transition-all duration-500" />
+
+            {/* Top row */}
+            <div className="flex items-start justify-between relative z-10">
+              <div className="w-14 h-14 rounded-2xl bg-violet-950/60 border border-violet-800/60 flex items-center justify-center text-violet-400 shadow-inner group-hover:scale-105 group-hover:border-violet-500/70 transition-all">
+                <GraduationCap className="w-7 h-7" />
               </div>
 
-              <span className="text-sm sm:text-base font-mono font-bold px-4 py-2 rounded-full bg-black/30 text-white backdrop-blur-md border border-white/25 shadow-sm">
-                {resActive.length} Active
+              <span className="text-xs font-mono font-semibold px-3 py-1 rounded-full bg-slate-950/80 text-violet-300 border border-violet-900/60 shadow-xs">
+                {resActive.length} Active Grants
               </span>
             </div>
 
-            {/* CENTERED typography */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pt-12 sm:pt-16">
-              <h3 className="text-3xl sm:text-4xl lg:text-[40px] font-black text-white tracking-tight leading-tight">
+            {/* Middle info */}
+            <div className="py-6 relative z-10">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-violet-400/90 font-semibold mb-1">
+                Academic & Lab Tracks
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
                 Research Fellowships
               </h3>
-
-              <p className="text-white/95 font-semibold text-base sm:text-lg mt-2.5 flex items-center space-x-2 group-hover:text-white transition-colors">
-                <span>Tap to explore</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+              <p className="text-xs sm:text-sm text-slate-400 mt-2.5 leading-relaxed line-clamp-3">
+                Undergraduate research fellowships, funded lab appointments, and faculty collaborations at Stanford, ETH, and IIT.
               </p>
             </div>
-          </div>
 
+            {/* Bottom action */}
+            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-slate-400 group-hover:text-violet-300 transition-colors relative z-10">
+              <span>Explore fellowships</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform text-violet-400" />
+            </div>
+          </div>
 
           {/* CARD 4: ADMIN PANEL (when signed in as admin) */}
           {currentUser?.role === 'admin' && (
             <div
               onClick={() => onNavigateTab('admin')}
-              className="relative overflow-hidden rounded-[32px] p-8 sm:p-9 lg:p-10 min-h-[340px] sm:min-h-[380px] lg:min-h-[420px] flex flex-col justify-between cursor-pointer group transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-rose-500/35 select-none border border-rose-500/50"
-              style={{
-                background:
-                  'linear-gradient(135deg, #E11D48 0%, #BE123C 45%, #881337 100%)'
-              }}
+              className="relative overflow-hidden rounded-2xl p-7 sm:p-8 min-h-[320px] sm:min-h-[360px] flex flex-col justify-between cursor-pointer group transition-all duration-300 bg-slate-900/95 hover:bg-slate-900 border border-slate-800/90 hover:border-rose-500/60 shadow-xl hover:shadow-2xl hover:shadow-rose-500/10 select-none"
             >
-              <div className="flex items-start justify-between">
-                <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 shadow-inner group-hover:scale-105 transition-transform">
-                  <ShieldCheck className="w-10 h-10 sm:w-11 sm:h-11" />
+              {/* Ambient accent top light */}
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 opacity-70 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-rose-500/20 transition-all duration-500" />
+
+              {/* Top row */}
+              <div className="flex items-start justify-between relative z-10">
+                <div className="w-14 h-14 rounded-2xl bg-rose-950/60 border border-rose-800/60 flex items-center justify-center text-rose-400 shadow-inner group-hover:scale-105 group-hover:border-rose-500/70 transition-all">
+                  <ShieldCheck className="w-7 h-7" />
                 </div>
 
-                <span className="text-sm sm:text-base font-mono font-bold px-4 py-2 rounded-full bg-black/40 text-rose-200 backdrop-blur-md border border-rose-400/40 shadow-sm">
+                <span className="text-xs font-mono font-semibold px-3 py-1 rounded-full bg-slate-950/80 text-rose-300 border border-rose-900/60 shadow-xs">
                   Console Ops
                 </span>
               </div>
 
-              <div className="pt-12 sm:pt-16">
-                <h3 className="text-3xl sm:text-4xl lg:text-[40px] font-black text-white tracking-tight leading-tight">
-                  Admin Panel
+              {/* Middle info */}
+              <div className="py-6 relative z-10">
+                <div className="text-[11px] font-mono uppercase tracking-wider text-rose-400/90 font-semibold mb-1">
+                  System Administration
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                  Admin Console
                 </h3>
-
-                <p className="text-rose-100 font-semibold text-base sm:text-lg mt-2.5 flex items-center space-x-2 group-hover:text-white transition-colors">
-                  <span>Tap to manage</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                <p className="text-xs sm:text-sm text-slate-400 mt-2.5 leading-relaxed line-clamp-3">
+                  Ingest PDF/link schedules, verify AI candidate listings, monitor cron expiration sweeps, and manage admins.
                 </p>
+              </div>
+
+              {/* Bottom action */}
+              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-slate-400 group-hover:text-rose-300 transition-colors relative z-10">
+                <span>Manage operations</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform text-rose-400" />
               </div>
             </div>
           )}

@@ -24,11 +24,14 @@ import {
   ArrowRight,
   ArrowLeft,
   Users,
-  UserPlus
+  UserPlus,
+  FileText,
+  UploadCloud
 } from 'lucide-react';
 import { Opportunity, OpportunityCategory, User } from '../types';
 import { formatDeadline } from '../utils';
 import { AdminManagementPanel } from './AdminManagementPanel';
+import { AIExtractorModal } from './AIExtractorModal';
 
 interface AdminDashboardProps {
   opportunities: Opportunity[];
@@ -53,6 +56,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [reviewQueue, setReviewQueue] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isExtractorOpen, setIsExtractorOpen] = useState(false);
+
+  const handleExtractorSuccess = (count: number, message: string) => {
+    setFeedback({ type: 'success', message });
+    fetchAdminData();
+    onRefreshOpportunities();
+    setActiveTab('review');
+  };
 
   // Past Dues state
   const [pastDueSearch, setPastDueSearch] = useState('');
@@ -577,6 +588,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Trigger AI Discovery</span>
+              </button>
+
+              <button
+                onClick={() => setIsExtractorOpen(true)}
+                className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-xs font-semibold text-white transition-colors shadow-xs shadow-indigo-600/20"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Import PDF / Links</span>
               </button>
 
               <button
@@ -1183,13 +1202,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={fetchAdminData}
-              className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-xs font-semibold text-slate-300 border border-slate-700 transition-colors shrink-0 self-start sm:self-auto"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh Queue</span>
-            </button>
+            <div className="flex items-center space-x-2 shrink-0 self-start sm:self-auto">
+              <button
+                onClick={() => setIsExtractorOpen(true)}
+                className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-xs font-semibold text-white transition-all shadow-xs shadow-indigo-600/25"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Import from PDF / Links</span>
+              </button>
+
+              <button
+                onClick={fetchAdminData}
+                className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-xs font-semibold text-slate-300 border border-slate-700 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh Queue</span>
+              </button>
+            </div>
           </div>
 
           {/* List of Review Candidate Cards */}
@@ -1317,14 +1346,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
                   All automated AI extractions have been processed. Trigger AI Discovery to fetch new candidate opportunities.
                 </p>
-                <button
-                  onClick={handleRunAIDiscovery}
-                  disabled={runningJob}
-                  className="mt-4 inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Trigger AI Discovery</span>
-                </button>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+                  <button
+                    onClick={() => setIsExtractorOpen(true)}
+                    className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold shadow-xs shadow-indigo-600/20"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Import from PDF or Links</span>
+                  </button>
+
+                  <button
+                    onClick={handleRunAIDiscovery}
+                    disabled={runningJob}
+                    className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-semibold border border-slate-700 shadow-xs"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Trigger AI Discovery</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1822,6 +1861,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* AI PDF & Link Extractor Modal */}
+      <AIExtractorModal
+        isOpen={isExtractorOpen}
+        onClose={() => setIsExtractorOpen(false)}
+        onSuccess={handleExtractorSuccess}
+      />
     </div>
   );
 };

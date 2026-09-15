@@ -3,6 +3,7 @@ import path from 'path';
 import { Opportunity, User, Bookmark, Reminder, NotificationItem, EligibilityResult, AdminRecord, AdminAccessRequest } from '../src/types';
 import { initialOpportunities } from './seedData';
 import { GoogleGenAI, Type } from '@google/genai';
+import { extractTextFromPdfBuffer, parseOpportunitiesFallback, SAMPLE_SEPTEMBER_2026_HACKATHONS, normalizeDate } from './pdfParser';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
@@ -197,6 +198,7 @@ class Store {
   private data: DatabaseSchema;
   private admins: AdminRecord[] = [];
   private adminRequests: AdminAccessRequest[] = [];
+  private customApiKey: string = '';
 
   constructor() {
     this.data = {
@@ -908,6 +910,297 @@ Return a JSON array of objects adhering to this schema:
       discoveredCount: newOpportunities.length,
       duplicatesSkipped,
       items: newOpportunities,
+    };
+  }
+
+  public getGeminiApiKey(): string {
+    return this.customApiKey || process.env.GEMINI_API_KEY || '';
+  }
+
+  public setGeminiApiKey(key: string): void {
+    this.customApiKey = key.trim();
+    process.env.GEMINI_API_KEY = key.trim();
+    try {
+      const envPath = path.join(process.cwd(), '.env');
+      let content = '';
+      if (fs.existsSync(envPath)) {
+        content = fs.readFileSync(envPath, 'utf-8');
+        if (content.includes('GEMINI_API_KEY=')) {
+          content = content.replace(/GEMINI_API_KEY=.*/, `GEMINI_API_KEY=${key.trim()}`);
+        } else {
+          content += `\nGEMINI_API_KEY=${key.trim()}\n`;
+        }
+      } else {
+        content = `GEMINI_API_KEY=${key.trim()}\n`;
+      }
+      fs.writeFileSync(envPath, content, 'utf-8');
+    } catch (e) {
+      console.warn('Could not persist key to .env file:', e);
+    }
+  }
+
+  // --- AI PDF & LINK EXTRACTION PIPELINE ---
+  public async extractOpportunitiesFromContent(params: {
+    pdfBase64?: string;
+    text?: string;
+    urls?: string[];
+    apiKey?: string;
+    category?: string;
+    useFallbackSample?: boolean;
+  }): Promise<{
+    discoveredCount: number;
+    duplicatesSkipped: number;
+    items: Opportunity[];
+    limitExceeded?: boolean;
+    warning?: string;
+  }> {
+    const activeApiKey = (params.apiKey || '').trim() || this.getGeminiApiKey();
+    let extractedText = params.text || '';
+
+    // If PDF base64 provided, parse using PDFParse
+    if (params.pdfBase64) {
+      try {
+        const buffer = Buffer.from(params.pdfBase64, 'base64');
+        const pdfResult = await extractTextFromPdfBuffer(buffer);
+        extractedText += (extractedText ? '\n\n' : '') + pdfResult.text;
+      } catch (pdfErr: any) {
+        console.error('Error parsing PDF buffer:', pdfErr);
+        if (!extractedText && !params.urls?.length && !params.useFallbackSample) {
+          throw new Error(`Failed to extract text from PDF: ${pdfErr.message}`);
+        }
+      }
+    }
+
+    if (params.urls && params.urls.length > 0) {
+      extractedText += (extractedText ? '\n\n' : '') + 'List of target opportunity links:\n' + params.urls.join('\n');
+    }
+
+    let parsedItems: any[] = [];
+    let limitExceeded = false;
+    let limitMessage = '';
+
+    // If user explicitly chose sample or if Gemini call is bypassed
+    if (params.useFallbackSample) {
+      parsedItems = [...SAMPLE_SEPTEMBER_2026_HACKATHONS];
+    } else {
+      // Check if API key is present
+      if (!activeApiKey) {
+        limitExceeded = true;
+        limitMessage = 'limit of ai exceeded pls use new api key';
+        // Run heuristic fallback parser on extracted text so data is not lost
+        parsedItems = parseOpportunitiesFallback(extractedText, 'Heuristic PDF/Link Parser');
+        if (parsedItems.length === 0) {
+          const err: any = new Error('limit of ai exceeded pls use new api key');
+          err.limitExceeded = true;
+          err.status = 429;
+          throw err;
+        }
+      } else {
+        // Try Gemini with AI Studio / GenAI
+        try {
+          const ai = new GoogleGenAI({
+            apiKey: activeApiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
+          });
+
+          const prompt = `You are Nexup's AI Opportunity Extraction Engine.
+Analyze the following document/links containing hackathons and university student opportunities (context: September 2026 and upcoming 2026-2027 seasons).
+Extract ALL individual hackathons, challenges, datathons, or student competitions mentioned.
+
+Document/Links content:
+"""
+${extractedText.slice(0, 40000)}
+"""
+
+For each opportunity extracted, return a JSON object with:
+- name: string (exact competition/hackathon title)
+- category: "hackathon" | "internship" | "research" (default: "hackathon")
+- organization: string (organizing company, institution, university or foundation)
+- description: string (clear 2-3 sentence overview of challenge, themes, technology, and what participants will build)
+- officialUrl: string (official link or devpost/unstop/portal URL)
+- registrationUrl: string (registration URL or official link)
+- startDate: string (YYYY-MM-DD or estimated)
+- endDate: string (YYYY-MM-DD or estimated)
+- deadline: string (YYYY-MM-DD - deadline for registration/submission)
+- location: string (e.g. "Online / Global", "San Francisco, CA", "Hybrid", etc.)
+- mode: "online" | "offline" | "hybrid"
+- geography: "international" | "national" | "regional" | "university"
+- domains: array of strings (e.g. ["AI/ML", "Web Development", "Robotics", "Cloud", "Cybersecurity", "Healthcare", "FinTech"])
+- skills: array of strings (e.g. ["Python", "TypeScript", "React", "PyTorch"])
+- eligibility: string (e.g. "Undergraduate/graduate students globally, 18+")
+- prizePool: string (e.g. "$50,000 cash", "₹20 lakh total", etc.)
+- confidence: number between 0.90 and 0.99
+
+Extract as many valid opportunities as found. Ensure all URLs and deadlines are accurate.`;
+
+          const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+          let responseText = '';
+          let lastGeminiErr: any = null;
+
+          for (const model of modelsToTry) {
+            try {
+              const resp = await ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                  responseMimeType: 'application/json',
+                  responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        name: { type: Type.STRING },
+                        category: { type: Type.STRING },
+                        organization: { type: Type.STRING },
+                        description: { type: Type.STRING },
+                        officialUrl: { type: Type.STRING },
+                        registrationUrl: { type: Type.STRING },
+                        startDate: { type: Type.STRING },
+                        endDate: { type: Type.STRING },
+                        deadline: { type: Type.STRING },
+                        location: { type: Type.STRING },
+                        mode: { type: Type.STRING },
+                        geography: { type: Type.STRING },
+                        domains: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        skills: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        eligibility: { type: Type.STRING },
+                        prizePool: { type: Type.STRING },
+                        confidence: { type: Type.NUMBER },
+                      },
+                      required: ['name', 'organization', 'officialUrl', 'description'],
+                    },
+                  },
+                },
+              });
+              if (resp.text) {
+                responseText = resp.text;
+                break;
+              }
+            } catch (gErr: any) {
+              lastGeminiErr = gErr;
+              const errMsg = (gErr.message || '').toLowerCase();
+              if (
+                gErr.status === 429 ||
+                gErr.code === 429 ||
+                errMsg.includes('resource_exhausted') ||
+                errMsg.includes('quota') ||
+                errMsg.includes('rate limit') ||
+                errMsg.includes('limit')
+              ) {
+                limitExceeded = true;
+                limitMessage = 'limit of ai exceeded pls use new api key';
+                break;
+              }
+            }
+          }
+
+          if (responseText) {
+            parsedItems = JSON.parse(responseText);
+          } else if (limitExceeded) {
+            parsedItems = parseOpportunitiesFallback(extractedText, 'Heuristic PDF/Link Parser');
+            if (parsedItems.length === 0) {
+              const err: any = new Error('limit of ai exceeded pls use new api key');
+              err.limitExceeded = true;
+              err.status = 429;
+              throw err;
+            }
+          } else if (lastGeminiErr) {
+            console.warn('Gemini extraction failed, attempting fallback parser:', lastGeminiErr);
+            parsedItems = parseOpportunitiesFallback(extractedText, 'Heuristic PDF/Link Parser');
+            if (parsedItems.length === 0) {
+              throw lastGeminiErr;
+            }
+          }
+        } catch (err: any) {
+          const errMsg = (err.message || '').toLowerCase();
+          if (
+            err.status === 429 ||
+            err.code === 429 ||
+            errMsg.includes('resource_exhausted') ||
+            errMsg.includes('quota') ||
+            errMsg.includes('rate limit') ||
+            errMsg.includes('limit') ||
+            err.limitExceeded
+          ) {
+            limitExceeded = true;
+            limitMessage = 'limit of ai exceeded pls use new api key';
+            parsedItems = parseOpportunitiesFallback(extractedText, 'Heuristic PDF/Link Parser');
+            if (parsedItems.length === 0) {
+              const finalErr: any = new Error('limit of ai exceeded pls use new api key');
+              finalErr.limitExceeded = true;
+              finalErr.status = 429;
+              throw finalErr;
+            }
+          } else {
+            throw err;
+          }
+        }
+      }
+    }
+
+    // Format and ingest into this.data.opportunities as pending review items
+    const newOpportunities: Opportunity[] = [];
+    let duplicatesSkipped = 0;
+
+    for (const item of parsedItems) {
+      if (!item.name || !item.officialUrl) continue;
+
+      const normUrl = item.officialUrl.toLowerCase().replace(/\/$/, '');
+      const isDuplicate = this.data.opportunities.some(
+        (existing) =>
+          existing.officialUrl.toLowerCase().replace(/\/$/, '') === normUrl ||
+          (existing.name.toLowerCase().trim() === item.name.toLowerCase().trim() &&
+            existing.organization.toLowerCase().trim() === (item.organization || '').toLowerCase().trim())
+      );
+
+      if (isDuplicate) {
+        duplicatesSkipped++;
+        continue;
+      }
+
+      const newOp: Opportunity = {
+        id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        category: (item.category as any) || 'hackathon',
+        name: item.name.trim(),
+        organization: item.organization?.trim() || 'Organizer',
+        logoUrl: item.logoUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=128&auto=format&fit=crop&q=80',
+        description: item.description?.trim() || `${item.name} organized by ${item.organization}`,
+        officialUrl: item.officialUrl.trim(),
+        registrationUrl: (item.registrationUrl || item.officialUrl).trim(),
+        startDate: item.startDate || '2026-10-15',
+        endDate: item.endDate || '2026-10-17',
+        deadline: item.deadline ? normalizeDate(item.deadline) : '2026-10-01',
+        location: item.location || (item.mode === 'online' ? 'Virtual Worldwide' : item.mode === 'hybrid' ? 'Hybrid / Worldwide' : 'In-person'),
+        mode: (item.mode as any) || 'online',
+        geography: (item.geography as any) || 'international',
+        domains: Array.isArray(item.domains) && item.domains.length > 0 ? item.domains : ['AI/ML', 'Software Development'],
+        skills: Array.isArray(item.skills) && item.skills.length > 0 ? item.skills : ['Python', 'TypeScript'],
+        eligibility: item.eligibility || 'Open to all students worldwide.',
+        status: 'open',
+        verificationStatus: 'pending', // PUSHED TO AI DISCOVERY REVIEW QUEUE FOR HUMAN VERIFICATION!
+        source: limitExceeded ? 'AI PDF Extractor (Heuristic Fallback)' : 'AI PDF / Link Extractor',
+        confidence: typeof item.confidence === 'number' ? item.confidence : 0.94,
+        bookmarksCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        prizePool: item.prizePool || undefined,
+        competitionType: item.competitionType || 'Hackathon',
+      };
+
+      this.data.opportunities.unshift(newOp);
+      newOpportunities.push(newOp);
+    }
+
+    if (newOpportunities.length > 0) {
+      this.save();
+    }
+
+    return {
+      discoveredCount: newOpportunities.length,
+      duplicatesSkipped,
+      items: newOpportunities,
+      limitExceeded,
+      warning: limitExceeded ? limitMessage : undefined,
     };
   }
 

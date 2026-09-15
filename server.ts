@@ -7,9 +7,10 @@ import { createServer as createViteServer } from 'vite';
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Helper middleware to extract current user (using simple session header or default demo user)
 app.use((req, res, next) => {
@@ -636,6 +637,91 @@ app.post('/api/admin/discover', async (req, res) => {
     res.status(500).json({ error: err.message || 'AI Discovery pipeline failed' });
   }
 });
+
+// --- AI PDF & LINK EXTRACTION FOR REVIEW QUEUE ---
+app.get('/api/admin/config/gemini-key', (req, res) => {
+  const currentKey = db.getGeminiApiKey();
+  const maskedKey = currentKey
+    ? (currentKey.length > 8 ? `${currentKey.slice(0, 4)}...${currentKey.slice(-4)}` : '****')
+    : null;
+  res.json({
+    configured: !!currentKey,
+    maskedKey,
+  });
+});
+
+app.post('/api/admin/config/gemini-key', (req, res) => {
+  const { apiKey } = req.body;
+  if (!apiKey || typeof apiKey !== 'string') {
+    return res.status(400).json({ error: 'Valid apiKey string is required' });
+  }
+  db.setGeminiApiKey(apiKey.trim());
+  res.json({
+    success: true,
+    message: 'Gemini API key updated successfully.',
+    maskedKey: `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}`,
+  });
+});
+
+const handleExtractOpportunities = async (req: express.Request, res: express.Response) => {
+  try {
+    const { pdfBase64, text, urls, apiKey, category, useFallbackSample } = req.body;
+
+    const result = await db.extractOpportunitiesFromContent({
+      pdfBase64,
+      text,
+      urls,
+      apiKey,
+      category,
+      useFallbackSample,
+    });
+
+    if (result.limitExceeded && result.discoveredCount === 0) {
+      return res.status(429).json({
+        success: false,
+        error: 'limit of ai exceeded pls use new api key',
+        limitExceeded: true,
+        message: 'limit of ai exceeded pls use new api key',
+      });
+    }
+
+    res.json({
+      success: true,
+      discoveredCount: result.discoveredCount,
+      duplicatesSkipped: result.duplicatesSkipped,
+      items: result.items,
+      limitExceeded: result.limitExceeded,
+      warning: result.warning,
+      message: result.limitExceeded
+        ? `limit of ai exceeded pls use new api key (Extracted ${result.discoveredCount} opportunities via fallback)`
+        : `Extracted ${result.discoveredCount} opportunities (${result.duplicatesSkipped} duplicates skipped). Submitted to AI Review Queue.`,
+    });
+  } catch (err: any) {
+    const errMsg = (err.message || '').toLowerCase();
+    const isLimit =
+      err.status === 429 ||
+      err.limitExceeded ||
+      errMsg.includes('limit of ai exceeded') ||
+      errMsg.includes('resource_exhausted') ||
+      errMsg.includes('quota') ||
+      errMsg.includes('rate limit');
+
+    if (isLimit) {
+      return res.status(429).json({
+        success: false,
+        error: 'limit of ai exceeded pls use new api key',
+        limitExceeded: true,
+        message: 'limit of ai exceeded pls use new api key',
+      });
+    }
+
+    console.error('Error in opportunity extraction:', err);
+    res.status(500).json({ error: err.message || 'Failed to extract opportunities' });
+  }
+};
+
+app.post('/api/admin/extract-opportunities', handleExtractOpportunities);
+app.post('/api/admin/extract-from-source', handleExtractOpportunities);
 
 // --- CRON ENGINE ENDPOINTS ---
 app.post('/api/cron/process-reminders', (req, res) => {

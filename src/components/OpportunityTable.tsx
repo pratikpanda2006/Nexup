@@ -45,28 +45,38 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({
             {opportunities.map((op) => {
               const isBookmarked = bookmarkedIds.has(op.id);
               
-              // Status formatting matching Screenshot 3
+              // Status formatting with micro status dot
               const statusPill = (() => {
                 if (op.status === 'closing_soon') {
                   return (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono bg-amber-950/70 text-amber-300 border border-amber-800/80 shadow-xs">
-                      closing_soon
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-mono font-medium bg-amber-950/50 text-amber-300 border border-amber-800/60 shadow-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                      <span>Closing soon</span>
                     </span>
                   );
                 }
                 if (op.status === 'closed') {
                   return (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono bg-slate-800 text-slate-400 border border-slate-700">
-                      closed
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-mono font-medium bg-slate-900 text-slate-400 border border-slate-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+                      <span>Closed</span>
                     </span>
                   );
                 }
                 return (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono bg-emerald-950/70 text-emerald-300 border border-emerald-800/80 shadow-xs">
-                    open
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-mono font-medium bg-emerald-950/40 text-emerald-300 border border-emerald-800/60 shadow-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span>Active</span>
                   </span>
                 );
               })();
+
+              const categoryBadgeClass =
+                op.category === 'hackathon'
+                  ? 'bg-amber-950/40 text-amber-300 border-amber-800/50'
+                  : op.category === 'internship'
+                  ? 'bg-indigo-950/40 text-indigo-300 border-indigo-800/50'
+                  : 'bg-violet-950/40 text-violet-300 border-violet-800/50';
 
               const categoryLabel = op.category.charAt(0).toUpperCase() + op.category.slice(1);
 
@@ -74,11 +84,11 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({
                 <tr
                   key={op.id}
                   onClick={() => onViewDetails(op)}
-                  className="hover:bg-slate-850/90 cursor-pointer transition-colors group"
+                  className="hover:bg-slate-800/50 cursor-pointer transition-colors group"
                 >
                   {/* TITLE & ORG */}
                   <td className="py-3.5 px-5 max-w-sm">
-                    <div className="font-bold text-slate-100 group-hover:text-blue-400 transition-colors text-sm line-clamp-1">
+                    <div className="font-semibold text-slate-100 group-hover:text-indigo-400 transition-colors text-sm line-clamp-1">
                       {op.name}
                     </div>
                     <div className="text-xs text-slate-400 mt-0.5 line-clamp-1 font-medium">
@@ -87,8 +97,10 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({
                   </td>
 
                   {/* CATEGORY */}
-                  <td className="py-3.5 px-4 whitespace-nowrap text-slate-300 font-medium text-xs">
-                    {categoryLabel}
+                  <td className="py-3.5 px-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center text-[10px] font-mono uppercase font-semibold px-2 py-0.5 rounded border ${categoryBadgeClass}`}>
+                      {categoryLabel}
+                    </span>
                   </td>
 
                   {/* DEADLINE */}
@@ -103,8 +115,9 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({
 
                   {/* VERIFICATION */}
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium font-mono bg-slate-800/90 text-slate-300 border border-slate-700">
-                      {op.verificationStatus || 'verified'}
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase font-semibold bg-slate-950/80 text-slate-300 border border-slate-800">
+                      <CheckCircle2 className="w-3 h-3 text-blue-400" />
+                      <span>{op.verificationStatus || 'verified'}</span>
                     </span>
                   </td>
 

@@ -13,10 +13,10 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Helper middleware to extract current user (using simple session header or default demo user)
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const userId = req.headers['x-user-id'] as string;
   if (userId) {
-    req.user = db.getUserById(userId);
+    req.user = await db.getUserById(userId);
   }
   next();
 });
@@ -30,27 +30,26 @@ declare global {
 }
 
 // --- AUTH ENDPOINTS ---
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', async (req, res) => {
   if (req.user) {
     return res.json({ user: req.user });
   }
-  // Default to student demo user if not logged in
-  const defaultUser = db.getUserById('user-demo-1') || db.getUsers()[0];
+  const users = await db.getUsers();
+  const defaultUser = (await db.getUserById('user-demo-1')) || users[0];
   res.json({ user: defaultUser });
 });
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { email, role } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  let user = db.getUserByEmail(email);
+  let user = await db.getUserByEmail(email);
   if (!user) {
-    // If logging in with demo admin or new email
-    const isAllowlisted = ADMIN_ALLOWLIST.includes(email.toLowerCase().trim()) || db.isEmailAdmin(email);
+    const isAllowlisted = ADMIN_ALLOWLIST.includes(email.toLowerCase().trim()) || (await db.isEmailAdmin(email));
     const assignedRole = role === 'admin' && isAllowlisted ? 'admin' : 'user';
-    const result = db.createUser({
+    const result = await db.createUser({
       name: email.split('@')[0],
       email,
       requestedRole: assignedRole,
@@ -61,22 +60,21 @@ app.post('/api/auth/login', (req, res) => {
   res.json({ user, message: 'Logged in successfully' });
 });
 
-app.post('/api/auth/signup', (req, res) => {
+app.post('/api/auth/signup', async (req, res) => {
   const { name, email, role } = req.body;
   if (!name || !email) {
     return res.status(400).json({ error: 'Name and email are required' });
   }
 
-  const existing = db.getUserByEmail(email);
+  const existing = await db.getUserByEmail(email);
   if (existing) {
     return res.status(400).json({ error: 'An account with this email already exists' });
   }
 
   const normalizedEmail = email.toLowerCase().trim();
-  const isAllowlisted = ADMIN_ALLOWLIST.includes(normalizedEmail) || db.isEmailAdmin(normalizedEmail);
   const requestedRole = role === 'admin' ? 'admin' : 'user';
 
-  const { user, isAdminApproved } = db.createUser({
+  const { user, isAdminApproved } = await db.createUser({
     name,
     email: normalizedEmail,
     requestedRole,
@@ -91,18 +89,19 @@ app.post('/api/auth/signup', (req, res) => {
   });
 });
 
-app.post('/api/auth/switch-demo', (req, res) => {
-  const { role } = req.body; // 'user' | 'admin'
+app.post('/api/auth/switch-demo', async (req, res) => {
+  const { role } = req.body;
   const targetId = role === 'admin' ? 'admin-demo-1' : 'user-demo-1';
-  const user = db.getUserById(targetId) || db.getUsers()[0];
+  const users = await db.getUsers();
+  const user = (await db.getUserById(targetId)) || users[0];
   res.json({ user });
 });
 
 // --- OPPORTUNITY ENDPOINTS ---
-app.get('/api/opportunities', (req, res) => {
+app.get('/api/opportunities', async (req, res) => {
   const { category, search, domain, mode, status, geography, sortBy, page = '1', limit = '12' } = req.query;
 
-  let opportunities = db.getOpportunities({
+  let opportunities = await db.getOpportunities({
     category: category as string,
     search: search as string,
     domain: domain as string,
@@ -112,7 +111,6 @@ app.get('/api/opportunities', (req, res) => {
     includePending: false,
   });
 
-  // Sorting
   if (sortBy === 'deadline_asc') {
     opportunities.sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
   } else if (sortBy === 'start_date') {
@@ -124,7 +122,6 @@ app.get('/api/opportunities', (req, res) => {
   } else if (sortBy === 'recently_updated') {
     opportunities.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   } else {
-    // Default: nearest deadline first among active ones
     opportunities.sort((a, b) => {
       if (a.status === 'closed' && b.status !== 'closed') return 1;
       if (a.status !== 'closed' && b.status === 'closed') return -1;
@@ -148,22 +145,21 @@ app.get('/api/opportunities', (req, res) => {
   });
 });
 
-app.get('/api/opportunities/:id', (req, res) => {
-  const op = db.getOpportunityById(req.params.id);
+app.get('/api/opportunities/:id', async (req, res) => {
+  const op = await db.getOpportunityById(req.params.id);
   if (!op) {
     return res.status(404).json({ error: 'Opportunity not found' });
   }
   res.json({ data: op });
 });
 
-// Admin Opportunity CRUD
-app.post('/api/opportunities', (req, res) => {
+app.post('/api/opportunities', async (req, res) => {
   const currentRole = req.user?.role || 'admin';
   if (currentRole !== 'admin') {
     return res.status(403).json({ error: 'Unauthorized: Admin role required' });
   }
 
-  const op = db.createOpportunity({
+  const op = await db.createOpportunity({
     ...req.body,
     verificationStatus: 'verified',
     status: req.body.status || 'open',
@@ -172,33 +168,33 @@ app.post('/api/opportunities', (req, res) => {
   res.status(201).json({ data: op });
 });
 
-app.patch('/api/opportunities/:id', (req, res) => {
+app.patch('/api/opportunities/:id', async (req, res) => {
   const currentRole = req.user?.role || 'admin';
   if (currentRole !== 'admin') {
     return res.status(403).json({ error: 'Unauthorized: Admin role required' });
   }
 
-  const updated = db.updateOpportunity(req.params.id, req.body);
+  const updated = await db.updateOpportunity(req.params.id, req.body);
   if (!updated) {
     return res.status(404).json({ error: 'Opportunity not found' });
   }
   res.json({ data: updated });
 });
 
-app.delete('/api/opportunities/:id', (req, res) => {
+app.delete('/api/opportunities/:id', async (req, res) => {
   const currentRole = req.user?.role || 'admin';
   if (currentRole !== 'admin') {
     return res.status(403).json({ error: 'Unauthorized: Admin role required' });
   }
 
-  const success = db.deleteOpportunity(req.params.id, true);
+  const success = await db.deleteOpportunity(req.params.id, true);
   if (!success) {
     return res.status(404).json({ error: 'Opportunity not found' });
   }
   res.json({ success: true, message: 'Opportunity archived successfully' });
 });
 
-app.post('/api/admin/bulk-delete', (req, res) => {
+app.post('/api/admin/bulk-delete', async (req, res) => {
   const currentRole = req.user?.role || 'admin';
   if (currentRole !== 'admin') {
     return res.status(403).json({ error: 'Unauthorized: Admin role required' });
@@ -211,7 +207,7 @@ app.post('/api/admin/bulk-delete', (req, res) => {
 
   let deletedCount = 0;
   for (const id of ids) {
-    if (db.deleteOpportunity(id, true)) {
+    if (await db.deleteOpportunity(id, true)) {
       deletedCount++;
     }
   }
@@ -220,37 +216,37 @@ app.post('/api/admin/bulk-delete', (req, res) => {
 });
 
 // --- BOOKMARKS ---
-app.get('/api/bookmarks', (req, res) => {
+app.get('/api/bookmarks', async (req, res) => {
   const userId = req.user?.id || 'user-demo-1';
-  const saved = db.getBookmarks(userId);
+  const saved = await db.getBookmarks(userId);
   res.json({ data: saved });
 });
 
-app.post('/api/bookmarks/toggle', (req, res) => {
+app.post('/api/bookmarks/toggle', async (req, res) => {
   const userId = req.user?.id || 'user-demo-1';
   const { opportunityId } = req.body;
   if (!opportunityId) {
     return res.status(400).json({ error: 'opportunityId is required' });
   }
-  const result = db.toggleBookmark(userId, opportunityId);
+  const result = await db.toggleBookmark(userId, opportunityId);
   res.json(result);
 });
 
 // --- REMINDERS ---
-app.get('/api/reminders', (req, res) => {
+app.get('/api/reminders', async (req, res) => {
   const userId = req.user?.id || 'user-demo-1';
-  const reminders = db.getReminders(userId);
+  const reminders = await db.getReminders(userId);
   res.json({ data: reminders });
 });
 
-app.post('/api/reminders', (req, res) => {
+app.post('/api/reminders', async (req, res) => {
   const userId = req.user?.id || 'user-demo-1';
   const { opportunityId, deadline, daysBefore, frequency, preferredTime, timezone } = req.body;
   if (!opportunityId || !deadline) {
     return res.status(400).json({ error: 'opportunityId and deadline are required' });
   }
 
-  const reminder = db.createReminder({
+  const reminder = await db.createReminder({
     userId,
     opportunityId,
     deadline,
@@ -263,42 +259,42 @@ app.post('/api/reminders', (req, res) => {
   res.status(201).json({ data: reminder, message: 'Reminder set successfully' });
 });
 
-app.delete('/api/reminders/:id', (req, res) => {
-  const success = db.deleteReminder(req.params.id);
+app.delete('/api/reminders/:id', async (req, res) => {
+  const success = await db.deleteReminder(req.params.id);
   res.json({ success });
 });
 
 // --- NOTIFICATIONS ---
-app.get('/api/notifications', (req, res) => {
+app.get('/api/notifications', async (req, res) => {
   const userId = req.user?.id || 'user-demo-1';
-  const notifs = db.getNotifications(userId);
+  const notifs = await db.getNotifications(userId);
   const unreadCount = notifs.filter((n) => !n.read).length;
   res.json({ data: notifs, unreadCount });
 });
 
-app.patch('/api/notifications/:id/read', (req, res) => {
-  const success = db.markNotificationRead(req.params.id);
+app.patch('/api/notifications/:id/read', async (req, res) => {
+  const success = await db.markNotificationRead(req.params.id);
   res.json({ success });
 });
 
-app.post('/api/notifications/mark-all-read', (req, res) => {
+app.post('/api/notifications/mark-all-read', async (req, res) => {
   const userId = req.user?.id || 'user-demo-1';
-  db.markAllNotificationsRead(userId);
+  await db.markAllNotificationsRead(userId);
   res.json({ success: true });
 });
 
-app.delete('/api/notifications/:id', (req, res) => {
-  const success = db.dismissNotification(req.params.id);
+app.delete('/api/notifications/:id', async (req, res) => {
+  const success = await db.dismissNotification(req.params.id);
   res.json({ success });
 });
 
 // --- ADMIN STATS & REVIEW QUEUE ---
-app.get('/api/admin/stats', (req, res) => {
-  const allOps = db.getOpportunities({ includePending: true });
+app.get('/api/admin/stats', async (req, res) => {
+  const allOps = await db.getOpportunities({ includePending: true });
   const activeOps = allOps.filter((o) => o.status === 'open' || o.status === 'closing_soon');
   const expiredOps = allOps.filter((o) => o.status === 'closed');
-  const reviewQueue = db.getReviewQueue();
-  const admins = db.getAdmins();
+  const reviewQueue = await db.getReviewQueue();
+  const admins = await db.getAdmins();
 
   res.json({
     total: allOps.length,
@@ -311,48 +307,35 @@ app.get('/api/admin/stats', (req, res) => {
     aiDiscovered: allOps.filter((o) => o.source.includes('AI') || o.source.includes('Gemini')).length,
     allowlistedEmails: admins.map((a) => a.email),
     adminsCount: admins.length,
-    pendingRequestsCount: db.getAdminAccessRequests().filter((r) => r.status === 'pending').length,
+    pendingRequestsCount: (await db.getAdminAccessRequests()).filter((r) => r.status === 'pending').length,
   });
 });
 
-// ==========================================
-// --- ADMIN AUTH & APPROVAL WORKFLOW API ---
-// ==========================================
-
-// Verify if an email is registered in the admin database
-app.post('/api/admin/auth/verify-email', (req, res) => {
+// --- ADMIN AUTH & APPROVAL WORKFLOW ---
+app.post('/api/admin/auth/verify-email', async (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
-
   const normalizedEmail = email.toLowerCase().trim();
-  const adminRecord = db.getAdminByEmail(normalizedEmail);
+  const adminRecord = await db.getAdminByEmail(normalizedEmail);
 
   if (adminRecord) {
-    return res.json({
-      exists: true,
-      message: 'Email registered in admin directory.',
-    });
+    return res.json({ exists: true, message: 'Email registered in admin directory.' });
   } else {
-    return res.json({
-      exists: false,
-      message: 'Access Denied',
-    });
+    return res.json({ exists: false, message: 'Access Denied' });
   }
 });
 
-// Login as admin: requires valid email in admins.json and matching password
-app.post('/api/admin/auth/login', (req, res) => {
+app.post('/api/admin/auth/login', async (req, res) => {
   const { email, password, name } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
 
   const normalizedEmail = email.toLowerCase().trim();
-  const adminRecord = db.getAdminByEmail(normalizedEmail);
+  const adminRecord = await db.getAdminByEmail(normalizedEmail);
 
-  // If email is NOT in admins.json
   if (!adminRecord) {
     return res.status(403).json({
       success: false,
@@ -361,7 +344,6 @@ app.post('/api/admin/auth/login', (req, res) => {
     });
   }
 
-  // If email IS in admins.json
   if (!password) {
     return res.status(400).json({
       error: 'Password is required to access admin mode.',
@@ -370,21 +352,19 @@ app.post('/api/admin/auth/login', (req, res) => {
   }
 
   if (adminRecord.password !== password) {
-    return res.status(401).json({
-      error: 'Incorrect password. Please verify and try again.',
-    });
+    return res.status(401).json({ error: 'Incorrect password. Please verify and try again.' });
   }
 
-  let user = db.getUserByEmail(normalizedEmail);
+  let user = await db.getUserByEmail(normalizedEmail);
   if (!user) {
-    const created = db.createUser({
+    const created = await db.createUser({
       name: adminRecord.name || name || normalizedEmail.split('@')[0],
       email: normalizedEmail,
       requestedRole: 'admin',
     });
     user = created.user;
   } else if (user.role !== 'admin') {
-    user = db.updateUser(user.id, { role: 'admin' }) || user;
+    user = (await db.updateUser(user.id, { role: 'admin' })) || user;
   }
 
   return res.json({
@@ -395,15 +375,13 @@ app.post('/api/admin/auth/login', (req, res) => {
   });
 });
 
-// Explicitly submit an access request to administrator
-app.post('/api/admin/auth/request-access', (req, res) => {
+app.post('/api/admin/auth/request-access', async (req, res) => {
   const { email, name } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
-
   const normalizedEmail = email.toLowerCase().trim();
-  const accessReq = db.createAdminAccessRequest(normalizedEmail, name);
+  const accessReq = await db.createAdminAccessRequest(normalizedEmail, name);
   res.json({
     success: true,
     requestId: accessReq.id,
@@ -412,16 +390,15 @@ app.post('/api/admin/auth/request-access', (req, res) => {
   });
 });
 
-// Check status of a pending access request (polled by client)
-app.get('/api/admin/auth/status', (req, res) => {
+app.get('/api/admin/auth/status', async (req, res) => {
   const { id, email } = req.query;
-  db.cleanExpiredRequests();
+  await db.cleanExpiredRequests();
 
   let reqItem = null;
   if (id) {
-    reqItem = db.getAdminAccessRequestById(id as string);
+    reqItem = await db.getAdminAccessRequestById(id as string);
   } else if (email) {
-    reqItem = db.getAdminAccessRequestByEmail(email as string);
+    reqItem = await db.getAdminAccessRequestByEmail(email as string);
   }
 
   if (!reqItem) {
@@ -429,16 +406,16 @@ app.get('/api/admin/auth/status', (req, res) => {
   }
 
   if (reqItem.status === 'accepted') {
-    let user = db.getUserByEmail(reqItem.email);
+    let user = await db.getUserByEmail(reqItem.email);
     if (!user) {
-      const created = db.createUser({
+      const created = await db.createUser({
         name: reqItem.name || reqItem.email.split('@')[0],
         email: reqItem.email,
         requestedRole: 'admin',
       });
       user = created.user;
     } else if (user.role !== 'admin') {
-      user = db.updateUser(user.id, { role: 'admin' }) || user;
+      user = (await db.updateUser(user.id, { role: 'admin' })) || user;
     }
 
     return res.json({
@@ -449,24 +426,14 @@ app.get('/api/admin/auth/status', (req, res) => {
   }
 
   if (reqItem.status === 'rejected') {
-    return res.json({
-      status: 'rejected',
-      message: 'u cant acess it',
-    });
+    return res.json({ status: 'rejected', message: 'u cant acess it' });
   }
 
   if (reqItem.status === 'expired') {
-    return res.json({
-      status: 'expired',
-      message: 'henceforth not a authorised admin pls contact PRATIK',
-    });
+    return res.json({ status: 'expired', message: 'henceforth not a authorised admin pls contact PRATIK' });
   }
 
-  // Pending
-  const remainingSeconds = Math.max(
-    0,
-    Math.round((new Date(reqItem.expiresAt).getTime() - Date.now()) / 1000)
-  );
+  const remainingSeconds = Math.max(0, Math.round((new Date(reqItem.expiresAt).getTime() - Date.now()) / 1000));
 
   return res.json({
     status: 'pending',
@@ -479,26 +446,22 @@ app.get('/api/admin/auth/status', (req, res) => {
   });
 });
 
-// Cancel a pending access request
-app.post('/api/admin/auth/cancel-request', (req, res) => {
+app.post('/api/admin/auth/cancel-request', async (req, res) => {
   const { id } = req.body;
   if (id) {
-    const r = db.getAdminAccessRequestById(id);
+    const r = await db.getAdminAccessRequestById(id);
     if (r && r.status === 'pending') {
-      r.status = 'expired';
-      db.saveAdminRequests();
+      await db.rejectAdminAccessRequest(id, 'system-cancel');
     }
   }
   res.json({ success: true });
 });
 
 // --- ADMIN MANAGEMENT ENDPOINTS ---
-
-// List all approved admins and pending requests
-app.get('/api/admin/manage/list', (req, res) => {
-  db.cleanExpiredRequests();
-  const admins = db.getAdmins();
-  const requests = db.getAdminAccessRequests();
+app.get('/api/admin/manage/list', async (req, res) => {
+  await db.cleanExpiredRequests();
+  const admins = await db.getAdmins();
+  const requests = await db.getAdminAccessRequests();
   res.json({
     admins,
     requests,
@@ -506,14 +469,13 @@ app.get('/api/admin/manage/list', (req, res) => {
   });
 });
 
-// Primary admin adds a new admin directly
-app.post('/api/admin/manage/add', (req, res) => {
+app.post('/api/admin/manage/add', async (req, res) => {
   const { email, password, name, addedBy } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  const result = db.addAdmin({
+  const result = await db.addAdmin({
     email,
     password: password || 'admin@2026',
     name,
@@ -531,8 +493,7 @@ app.post('/api/admin/manage/add', (req, res) => {
   });
 });
 
-// Update password of self or another admin (if primary)
-app.post('/api/admin/manage/change-password', (req, res) => {
+app.post('/api/admin/manage/change-password', async (req, res) => {
   const { email, newPassword, callerEmail } = req.body;
   if (!email || !newPassword) {
     return res.status(400).json({ error: 'Email and new password are required' });
@@ -541,16 +502,15 @@ app.post('/api/admin/manage/change-password', (req, res) => {
   const normalizedCaller = (callerEmail || '').toLowerCase().trim();
   const normalizedTarget = email.toLowerCase().trim();
 
-  // If modifying someone else's password, must be primary admin
   if (normalizedCaller && normalizedCaller !== normalizedTarget) {
-    if (!db.isPrimaryAdmin(normalizedCaller)) {
+    if (!(await db.isPrimaryAdmin(normalizedCaller))) {
       return res.status(403).json({
-        error: 'Only primary administrators (pratikpanda2006@gmail.com / freeuser13012026@gmail.com) can change other admins’ passwords.',
+        error: 'Only primary administrators can change other admins\u2019 passwords.',
       });
     }
   }
 
-  const result = db.updateAdminPassword(normalizedTarget, newPassword);
+  const result = await db.updateAdminPassword(normalizedTarget, newPassword);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -558,21 +518,18 @@ app.post('/api/admin/manage/change-password', (req, res) => {
   res.json({ success: true, message: `Password updated successfully for ${normalizedTarget}.` });
 });
 
-// Remove an admin (cannot remove primary admins)
-app.post('/api/admin/manage/remove', (req, res) => {
+app.post('/api/admin/manage/remove', async (req, res) => {
   const { email, callerEmail } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
 
   const normalizedCaller = (callerEmail || '').toLowerCase().trim();
-  if (normalizedCaller && !db.isPrimaryAdmin(normalizedCaller)) {
-    return res.status(403).json({
-      error: 'Only primary administrators can remove other administrators.',
-    });
+  if (normalizedCaller && !(await db.isPrimaryAdmin(normalizedCaller))) {
+    return res.status(403).json({ error: 'Only primary administrators can remove other administrators.' });
   }
 
-  const result = db.removeAdmin(email);
+  const result = await db.removeAdmin(email);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -580,10 +537,9 @@ app.post('/api/admin/manage/remove', (req, res) => {
   res.json({ success: true, message: `Admin ${email} removed successfully.` });
 });
 
-// Primary admin accepts an access request
-app.post('/api/admin/manage/requests/:id/accept', (req, res) => {
+app.post('/api/admin/manage/requests/:id/accept', async (req, res) => {
   const { reviewedBy } = req.body;
-  const result = db.acceptAdminAccessRequest(req.params.id, reviewedBy || 'freeuser13012026@gmail.com');
+  const result = await db.acceptAdminAccessRequest(req.params.id, reviewedBy || 'freeuser13012026@gmail.com');
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -594,32 +550,28 @@ app.post('/api/admin/manage/requests/:id/accept', (req, res) => {
   });
 });
 
-// Primary admin rejects an access request
-app.post('/api/admin/manage/requests/:id/reject', (req, res) => {
+app.post('/api/admin/manage/requests/:id/reject', async (req, res) => {
   const { reviewedBy } = req.body;
-  const result = db.rejectAdminAccessRequest(req.params.id, reviewedBy || 'freeuser13012026@gmail.com');
+  const result = await db.rejectAdminAccessRequest(req.params.id, reviewedBy || 'freeuser13012026@gmail.com');
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
-  res.json({
-    success: true,
-    message: 'Access request rejected. User will receive denial notification.',
-  });
+  res.json({ success: true, message: 'Access request rejected. User will receive denial notification.' });
 });
 
-app.get('/api/admin/review', (req, res) => {
-  const queue = db.getReviewQueue();
+app.get('/api/admin/review', async (req, res) => {
+  const queue = await db.getReviewQueue();
   res.json({ data: queue });
 });
 
-app.post('/api/admin/review/:id/approve', (req, res) => {
-  const updated = db.approveOpportunity(req.params.id, req.body);
+app.post('/api/admin/review/:id/approve', async (req, res) => {
+  const updated = await db.approveOpportunity(req.params.id, req.body);
   if (!updated) return res.status(404).json({ error: 'Item not found' });
   res.json({ data: updated, message: 'Opportunity approved and published!' });
 });
 
-app.post('/api/admin/review/:id/reject', (req, res) => {
-  const updated = db.rejectOpportunity(req.params.id);
+app.post('/api/admin/review/:id/reject', async (req, res) => {
+  const updated = await db.rejectOpportunity(req.params.id);
   if (!updated) return res.status(404).json({ error: 'Item not found' });
   res.json({ data: updated, message: 'Opportunity rejected.' });
 });
@@ -639,23 +591,20 @@ app.post('/api/admin/discover', async (req, res) => {
 });
 
 // --- AI PDF & LINK EXTRACTION FOR REVIEW QUEUE ---
-app.get('/api/admin/config/gemini-key', (req, res) => {
-  const currentKey = db.getGeminiApiKey();
+app.get('/api/admin/config/gemini-key', async (req, res) => {
+  const currentKey = await db.getGeminiApiKey();
   const maskedKey = currentKey
     ? (currentKey.length > 8 ? `${currentKey.slice(0, 4)}...${currentKey.slice(-4)}` : '****')
     : null;
-  res.json({
-    configured: !!currentKey,
-    maskedKey,
-  });
+  res.json({ configured: !!currentKey, maskedKey });
 });
 
-app.post('/api/admin/config/gemini-key', (req, res) => {
+app.post('/api/admin/config/gemini-key', async (req, res) => {
   const { apiKey } = req.body;
   if (!apiKey || typeof apiKey !== 'string') {
     return res.status(400).json({ error: 'Valid apiKey string is required' });
   }
-  db.setGeminiApiKey(apiKey.trim());
+  await db.setGeminiApiKey(apiKey.trim());
   res.json({
     success: true,
     message: 'Gemini API key updated successfully.',
@@ -668,12 +617,7 @@ const handleExtractOpportunities = async (req: express.Request, res: express.Res
     const { pdfBase64, text, urls, apiKey, category, useFallbackSample } = req.body;
 
     const result = await db.extractOpportunitiesFromContent({
-      pdfBase64,
-      text,
-      urls,
-      apiKey,
-      category,
-      useFallbackSample,
+      pdfBase64, text, urls, apiKey, category, useFallbackSample,
     });
 
     if (result.limitExceeded && result.discoveredCount === 0) {
@@ -724,13 +668,13 @@ app.post('/api/admin/extract-opportunities', handleExtractOpportunities);
 app.post('/api/admin/extract-from-source', handleExtractOpportunities);
 
 // --- CRON ENGINE ENDPOINTS ---
-app.post('/api/cron/process-reminders', (req, res) => {
-  const result = db.processReminders();
+app.post('/api/cron/process-reminders', async (req, res) => {
+  const result = await db.processReminders();
   res.json({ success: true, ...result });
 });
 
-app.post('/api/cron/check-expiry', (req, res) => {
-  const result = db.checkExpiry();
+app.post('/api/cron/check-expiry', async (req, res) => {
+  const result = await db.checkExpiry();
   res.json({ success: true, ...result });
 });
 
@@ -753,9 +697,9 @@ app.post('/api/ai/eligibility', async (req, res) => {
 });
 
 // --- USER PROFILE & ONBOARDING ---
-app.patch('/api/user/profile', (req, res) => {
+app.patch('/api/user/profile', async (req, res) => {
   const userId = req.user?.id || 'user-demo-1';
-  const updated = db.updateUser(userId, req.body);
+  const updated = await db.updateUser(userId, req.body);
   res.json({ data: updated });
 });
 

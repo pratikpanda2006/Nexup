@@ -1,271 +1,207 @@
-import fs from 'fs';
-import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 import { Opportunity, User, Bookmark, Reminder, NotificationItem, EligibilityResult, AdminRecord, AdminAccessRequest } from '../src/types';
 import { initialOpportunities } from './seedData';
 import { GoogleGenAI, Type } from '@google/genai';
 import { extractTextFromPdfBuffer, parseOpportunitiesFallback, SAMPLE_SEPTEMBER_2026_HACKATHONS, normalizeDate } from './pdfParser';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DB_FILE = path.join(DATA_DIR, 'db.json');
-export const ADMINS_FILE = path.join(DATA_DIR, 'admins.json');
-export const ADMIN_REQUESTS_FILE = path.join(DATA_DIR, 'admin_requests.json');
+const supabase = createClient(
+  process.env.SUPABASE_URL as string,
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string
+);
 
-// Primary administrators with permanent supervisory permissions
 export const PRIMARY_ADMIN_EMAILS = [
   'pratikpanda2006@gmail.com',
   'freeuser13012026@gmail.com',
 ];
 
-export const DEFAULT_PRIMARY_ADMINS: AdminRecord[] = [
-  {
-    email: 'pratikpanda2006@gmail.com',
-    password: 'admin@2026',
-    name: 'Pratik Panda',
-    isPrimary: true,
-    addedBy: 'System (Primary)',
-    addedAt: '2026-09-14T00:00:00.000Z',
-  },
-  {
-    email: 'freeuser13012026@gmail.com',
-    password: 'admin@2026',
-    name: 'Primary Admin',
-    isPrimary: true,
-    addedBy: 'System (Primary)',
-    addedAt: '2026-09-14T00:00:00.000Z',
-  },
-];
-
-// Admin allowlist as requested in the prompt specification
 export const ADMIN_ALLOWLIST = [
   'admin@example.com',
   'admin@nexup.io',
   'freeuser13012026@gmail.com',
   'pratikpanda2006@gmail.com',
-  'sarah.chen@university.edu'
+  'sarah.chen@university.edu',
 ];
 
-interface DatabaseSchema {
-  opportunities: Opportunity[];
-  users: User[];
-  bookmarks: Bookmark[];
-  reminders: Reminder[];
-  notifications: NotificationItem[];
+// ---------- row <-> object mappers ----------
+
+function rowToOpportunity(r: any): Opportunity {
+  return {
+    id: r.id,
+    category: r.category,
+    name: r.name,
+    organization: r.organization,
+    logoUrl: r.logo_url,
+    description: r.description,
+    officialUrl: r.official_url,
+    registrationUrl: r.registration_url,
+    startDate: r.start_date,
+    endDate: r.end_date,
+    deadline: r.deadline,
+    location: r.location,
+    mode: r.mode,
+    geography: r.geography,
+    domains: r.domains || [],
+    skills: r.skills || [],
+    eligibility: r.eligibility,
+    status: r.status,
+    verificationStatus: r.verification_status,
+    source: r.source,
+    confidence: r.confidence,
+    bookmarksCount: r.bookmarks_count,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    teamSize: r.team_size,
+    prizePool: r.prize_pool,
+    competitionType: r.competition_type,
+    role: r.role,
+    duration: r.duration,
+    stipend: r.stipend,
+    paidType: r.paid_type,
+    professor: r.professor,
+    institution: r.institution,
+    researchArea: r.research_area,
+    funding: r.funding,
+    positionType: r.position_type,
+  } as Opportunity;
 }
 
-// Initial demo users
-const initialUsers: User[] = [
-  {
-    id: 'user-demo-1',
-    name: 'Alex Rivera',
-    email: 'student@nexup.io',
-    role: 'user',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&auto=format&fit=crop&q=80',
-    interests: ['AI/ML', 'Robotics', 'Web Development'],
-    preferredDomains: ['AI/ML', 'Robotics', 'Web Development'],
-    preferredTypes: ['hackathon', 'internship', 'research'],
-    locationPreference: 'Remote & California',
-    skills: ['Python', 'TypeScript', 'PyTorch', 'React', 'Docker'],
-    education: 'Junior in Computer Science & AI',
-    timezone: 'America/Los_Angeles',
-    onboarded: true,
-    notificationPrefs: {
-      emailAlerts: true,
-      deadlineThresholds: [7, 3, 1],
-      frequency: 'every_3_days',
-    },
-  },
-  {
-    id: 'admin-demo-1',
-    name: 'Dr. Sarah Chen',
-    email: 'admin@nexup.io',
-    role: 'admin',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=128&auto=format&fit=crop&q=80',
-    interests: ['Research', 'AI/ML', 'Higher Education'],
-    preferredDomains: ['Research', 'AI/ML', 'Software Development'],
-    preferredTypes: ['research', 'hackathon', 'internship'],
-    locationPreference: 'Global',
-    skills: ['Machine Learning', 'Research Grant Review', 'Python'],
-    education: 'Ph.D. in Computer Science',
-    timezone: 'America/New_York',
-    onboarded: true,
-    notificationPrefs: {
-      emailAlerts: true,
-      deadlineThresholds: [7, 3],
-      frequency: 'once',
-    },
-  },
-  {
-    id: 'user-current-session',
-    name: 'Alex Developer',
-    email: 'freeuser13012026@gmail.com',
-    role: 'admin', // Authorized by allowlist
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&auto=format&fit=crop&q=80',
-    interests: ['AI/ML', 'Web Development', 'FinTech'],
-    preferredDomains: ['AI/ML', 'Web Development', 'FinTech'],
-    preferredTypes: ['hackathon', 'internship', 'research'],
-    locationPreference: 'Worldwide',
-    skills: ['Python', 'React', 'Go', 'Next.js', 'PyTorch'],
-    education: 'Undergraduate Senior in Software Engineering',
-    timezone: 'UTC',
-    onboarded: true,
-    notificationPrefs: {
-      emailAlerts: true,
-      deadlineThresholds: [7, 3, 1],
-      frequency: 'every_3_days',
-    },
-  },
-  {
-    id: 'user-pratik-panda',
-    name: 'Pratik Panda',
-    email: 'pratikpanda2006@gmail.com',
-    role: 'admin', // Primary admin
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&auto=format&fit=crop&q=80',
-    interests: ['AI/ML', 'System Architecture', 'Software Engineering'],
-    preferredDomains: ['AI/ML', 'Web Development', 'Cybersecurity'],
-    preferredTypes: ['hackathon', 'internship', 'research'],
-    locationPreference: 'Global',
-    skills: ['Python', 'TypeScript', 'Node.js', 'Distributed Systems'],
-    education: 'Founder & Primary Administrator',
-    timezone: 'UTC',
-    onboarded: true,
-    notificationPrefs: {
-      emailAlerts: true,
-      deadlineThresholds: [7, 3, 1],
-      frequency: 'every_3_days',
-    },
-  },
-];
+function opportunityToRow(op: Partial<Opportunity>): any {
+  const row: any = {};
+  if (op.id !== undefined) row.id = op.id;
+  if (op.category !== undefined) row.category = op.category;
+  if (op.name !== undefined) row.name = op.name;
+  if (op.organization !== undefined) row.organization = op.organization;
+  if (op.logoUrl !== undefined) row.logo_url = op.logoUrl;
+  if (op.description !== undefined) row.description = op.description;
+  if (op.officialUrl !== undefined) row.official_url = op.officialUrl;
+  if (op.registrationUrl !== undefined) row.registration_url = op.registrationUrl;
+  if (op.startDate !== undefined) row.start_date = op.startDate;
+  if (op.endDate !== undefined) row.end_date = op.endDate;
+  if (op.deadline !== undefined) row.deadline = op.deadline;
+  if (op.location !== undefined) row.location = op.location;
+  if (op.mode !== undefined) row.mode = op.mode;
+  if (op.geography !== undefined) row.geography = op.geography;
+  if (op.domains !== undefined) row.domains = op.domains;
+  if (op.skills !== undefined) row.skills = op.skills;
+  if (op.eligibility !== undefined) row.eligibility = op.eligibility;
+  if (op.status !== undefined) row.status = op.status;
+  if (op.verificationStatus !== undefined) row.verification_status = op.verificationStatus;
+  if (op.source !== undefined) row.source = op.source;
+  if (op.confidence !== undefined) row.confidence = op.confidence;
+  if (op.bookmarksCount !== undefined) row.bookmarks_count = op.bookmarksCount;
+  if (op.createdAt !== undefined) row.created_at = op.createdAt;
+  if (op.updatedAt !== undefined) row.updated_at = op.updatedAt;
+  if (op.teamSize !== undefined) row.team_size = op.teamSize;
+  if (op.prizePool !== undefined) row.prize_pool = op.prizePool;
+  if (op.competitionType !== undefined) row.competition_type = op.competitionType;
+  if ((op as any).role !== undefined) row.role = (op as any).role;
+  if (op.duration !== undefined) row.duration = op.duration;
+  if (op.stipend !== undefined) row.stipend = op.stipend;
+  if (op.paidType !== undefined) row.paid_type = op.paidType;
+  if (op.professor !== undefined) row.professor = op.professor;
+  if (op.institution !== undefined) row.institution = op.institution;
+  if (op.researchArea !== undefined) row.research_area = op.researchArea;
+  if (op.funding !== undefined) row.funding = op.funding;
+  if (op.positionType !== undefined) row.position_type = op.positionType;
+  return row;
+}
 
-const initialBookmarks: Bookmark[] = [
-  {
-    id: 'bm-1',
-    userId: 'user-demo-1',
-    opportunityId: 'hack-01',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'bm-2',
-    userId: 'user-demo-1',
-    opportunityId: 'intern-01',
-    createdAt: new Date().toISOString(),
-  },
-];
+function rowToUser(r: any): User {
+  return {
+    id: r.id,
+    name: r.name,
+    email: r.email,
+    role: r.role,
+    avatar: r.avatar,
+    interests: r.interests || [],
+    preferredDomains: r.preferred_domains || [],
+    preferredTypes: r.preferred_types || [],
+    locationPreference: r.location_preference,
+    skills: r.skills || [],
+    education: r.education,
+    timezone: r.timezone,
+    onboarded: r.onboarded,
+    notificationPrefs: r.notification_prefs || { emailAlerts: true, deadlineThresholds: [7, 3, 1], frequency: 'every_3_days' },
+  } as User;
+}
 
-const initialReminders: Reminder[] = [
-  {
-    id: 'rem-1',
-    userId: 'user-demo-1',
-    opportunityId: 'hack-01',
-    deadline: '2026-09-18',
-    daysBefore: 3,
-    frequency: 'every_3_days',
-    preferredTime: '20:00',
-    timezone: 'America/Los_Angeles',
-    active: true,
-    lastSentAt: '2026-09-11T20:00:00Z',
-    createdAt: '2026-09-10T12:00:00Z',
-  },
-];
+function userToRow(u: Partial<User>): any {
+  const row: any = {};
+  if (u.id !== undefined) row.id = u.id;
+  if (u.name !== undefined) row.name = u.name;
+  if (u.email !== undefined) row.email = u.email;
+  if (u.role !== undefined) row.role = u.role;
+  if (u.avatar !== undefined) row.avatar = u.avatar;
+  if (u.interests !== undefined) row.interests = u.interests;
+  if (u.preferredDomains !== undefined) row.preferred_domains = u.preferredDomains;
+  if (u.preferredTypes !== undefined) row.preferred_types = u.preferredTypes;
+  if (u.locationPreference !== undefined) row.location_preference = u.locationPreference;
+  if (u.skills !== undefined) row.skills = u.skills;
+  if (u.education !== undefined) row.education = u.education;
+  if (u.timezone !== undefined) row.timezone = u.timezone;
+  if (u.onboarded !== undefined) row.onboarded = u.onboarded;
+  if (u.notificationPrefs !== undefined) row.notification_prefs = u.notificationPrefs;
+  return row;
+}
 
-const initialNotifications: NotificationItem[] = [
-  {
-    id: 'notif-1',
-    userId: 'user-demo-1',
-    opportunityId: 'hack-01',
-    opportunityName: 'HackMIT 2026',
-    opportunityCategory: 'hackathon',
-    title: 'Hackathon Deadline Approaching',
-    message: 'HackMIT 2026 registration closes in 4 days. Complete your application team submission.',
-    type: 'deadline_warning',
-    read: false,
-    createdAt: new Date(Date.now() - 3600 * 1000 * 4).toISOString(),
-  },
-  {
-    id: 'notif-2',
-    userId: 'user-demo-1',
-    opportunityId: 'intern-01',
-    opportunityName: 'AI Research Scientist Intern - Frontier Reasoning',
-    opportunityCategory: 'internship',
-    title: 'Reminder: DeepMind Application',
-    message: 'Scheduled reminder: Google DeepMind applications close on September 20. Don’t forget to attach your GitHub and research papers.',
-    type: 'reminder',
-    read: false,
-    createdAt: new Date(Date.now() - 3600 * 1000 * 24).toISOString(),
-  },
-];
+function rowToReminder(r: any): Reminder {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    opportunityId: r.opportunity_id,
+    deadline: r.deadline,
+    daysBefore: r.days_before,
+    frequency: r.frequency,
+    preferredTime: r.preferred_time,
+    timezone: r.timezone,
+    active: r.active,
+    lastSentAt: r.last_sent_at,
+    createdAt: r.created_at,
+  } as Reminder;
+}
+
+function rowToNotification(r: any): NotificationItem {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    opportunityId: r.opportunity_id,
+    opportunityName: r.opportunity_name,
+    opportunityCategory: r.opportunity_category,
+    title: r.title,
+    message: r.message,
+    type: r.type,
+    read: r.read,
+    createdAt: r.created_at,
+  } as NotificationItem;
+}
+
+function rowToAdmin(r: any): AdminRecord {
+  return {
+    email: r.email,
+    password: r.password,
+    name: r.name,
+    isPrimary: r.is_primary,
+    addedBy: r.added_by,
+    addedAt: r.added_at,
+  } as AdminRecord;
+}
+
+function rowToAdminRequest(r: any): AdminAccessRequest {
+  return {
+    id: r.id,
+    email: r.email,
+    name: r.name,
+    requestedAt: r.requested_at,
+    expiresAt: r.expires_at,
+    status: r.status,
+    reviewedBy: r.reviewed_by,
+    reviewedAt: r.reviewed_at,
+  } as AdminAccessRequest;
+}
 
 class Store {
-  private data: DatabaseSchema;
-  private admins: AdminRecord[] = [];
-  private adminRequests: AdminAccessRequest[] = [];
-  private customApiKey: string = '';
-
-  constructor() {
-    this.data = {
-      opportunities: initialOpportunities,
-      users: initialUsers,
-      bookmarks: initialBookmarks,
-      reminders: initialReminders,
-      notifications: initialNotifications,
-    };
-    this.init();
-  }
-
-  private init() {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      if (fs.existsSync(DB_FILE)) {
-        const raw = fs.readFileSync(DB_FILE, 'utf-8');
-        const parsed = JSON.parse(raw);
-        this.data = {
-          opportunities: parsed.opportunities || initialOpportunities,
-          users: parsed.users || initialUsers,
-          bookmarks: parsed.bookmarks || initialBookmarks,
-          reminders: parsed.reminders || initialReminders,
-          notifications: parsed.notifications || initialNotifications,
-        };
-        // Ensure new initialOpportunities (e.g. pending review queue items) exist
-        for (const initOp of initialOpportunities) {
-          if (!this.data.opportunities.some((o) => o.id === initOp.id)) {
-            this.data.opportunities.push(initOp);
-          }
-        }
-        // Ensure initial users like Pratik Panda exist in DB
-        for (const initU of initialUsers) {
-          if (!this.data.users.some((u) => u.email.toLowerCase() === initU.email.toLowerCase())) {
-            this.data.users.push(initU);
-          }
-        }
-        this.save();
-      } else {
-        this.save();
-      }
-
-      // Load persistent Admin records and access requests
-      this.loadAdmins();
-      this.loadAdminRequests();
-    } catch (err) {
-      console.warn('Could not read persistent DB file, using in-memory state:', err);
-      this.loadAdmins();
-      this.loadAdminRequests();
-    }
-  }
-
-  private save() {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      fs.writeFileSync(DB_FILE, JSON.stringify(this.data, null, 2), 'utf-8');
-    } catch (err) {
-      console.warn('Could not save DB file:', err);
-    }
-  }
-
   // --- OPPORTUNITY METHODS ---
-  public getOpportunities(filter?: {
+  public async getOpportunities(filter?: {
     category?: string;
     search?: string;
     domain?: string;
@@ -273,34 +209,29 @@ class Store {
     status?: string;
     geography?: string;
     includePending?: boolean;
-  }): Opportunity[] {
-    let list = [...this.data.opportunities];
+  }): Promise<Opportunity[]> {
+    const { data, error } = await supabase.from('opportunities').select('*');
+    if (error) throw error;
 
-    // Status / expiry check refresh on retrieval
+    let list = (data || []).map(rowToOpportunity);
+
     const now = new Date();
     list = list.map((op) => {
       const deadlineDate = new Date(op.deadline + 'T23:59:59Z');
       const diffDays = Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      
       let calculatedStatus: Opportunity['status'] = op.status;
-      if (diffDays < 0) {
-        calculatedStatus = 'closed';
-      } else if (diffDays <= 3) {
-        calculatedStatus = 'closing_soon';
-      } else if (op.status !== 'archived') {
-        calculatedStatus = 'open';
-      }
+      if (diffDays < 0) calculatedStatus = 'closed';
+      else if (diffDays <= 3) calculatedStatus = 'closing_soon';
+      else if (op.status !== 'archived') calculatedStatus = 'open';
       return { ...op, status: calculatedStatus };
     });
 
     if (!filter?.includePending) {
       list = list.filter((op) => op.verificationStatus === 'verified');
     }
-
     if (filter?.category && filter.category !== 'all') {
       list = list.filter((op) => op.category === filter.category);
     }
-
     if (filter?.search) {
       const q = filter.search.toLowerCase();
       list = list.filter(
@@ -312,324 +243,303 @@ class Store {
           op.skills.some((s) => s.toLowerCase().includes(q))
       );
     }
-
     if (filter?.domain && filter.domain !== 'all') {
-      list = list.filter((op) =>
-        op.domains.some((d) => d.toLowerCase() === filter.domain?.toLowerCase())
-      );
+      list = list.filter((op) => op.domains.some((d) => d.toLowerCase() === filter.domain?.toLowerCase()));
     }
-
     if (filter?.mode && filter.mode !== 'all') {
       list = list.filter((op) => op.mode === filter.mode);
     }
-
     if (filter?.status && filter.status !== 'all') {
       list = list.filter((op) => op.status === filter.status);
     }
-
     if (filter?.geography && filter.geography !== 'all') {
       list = list.filter((op) => op.geography === filter.geography);
     }
-
     return list;
   }
 
-  public getOpportunityById(id: string): Opportunity | undefined {
-    return this.data.opportunities.find((op) => op.id === id);
+  public async getOpportunityById(id: string): Promise<Opportunity | undefined> {
+    const { data, error } = await supabase.from('opportunities').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data ? rowToOpportunity(data) : undefined;
   }
 
-  public createOpportunity(op: Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt' | 'bookmarksCount'>): Opportunity {
-    const newOp: Opportunity = {
-      ...op,
+  public async createOpportunity(op: Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt' | 'bookmarksCount'>): Promise<Opportunity> {
+    const newOp: any = {
+      ...opportunityToRow(op as any),
       id: `op-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-      bookmarksCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      bookmarks_count: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
-    this.data.opportunities.unshift(newOp);
-    this.save();
-    return newOp;
+    const { data, error } = await supabase.from('opportunities').insert(newOp).select().single();
+    if (error) throw error;
+    return rowToOpportunity(data);
   }
 
-  public updateOpportunity(id: string, updates: Partial<Opportunity>): Opportunity | null {
-    const idx = this.data.opportunities.findIndex((op) => op.id === id);
-    if (idx === -1) return null;
-    this.data.opportunities[idx] = {
-      ...this.data.opportunities[idx],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    this.save();
-    return this.data.opportunities[idx];
+  public async updateOpportunity(id: string, updates: Partial<Opportunity>): Promise<Opportunity | null> {
+    const row = { ...opportunityToRow(updates), updated_at: new Date().toISOString() };
+    const { data, error } = await supabase.from('opportunities').update(row).eq('id', id).select().maybeSingle();
+    if (error) throw error;
+    return data ? rowToOpportunity(data) : null;
   }
 
-  public deleteOpportunity(id: string, soft: boolean = true): boolean {
-    const idx = this.data.opportunities.findIndex((op) => op.id === id);
-    if (idx === -1) return false;
+  public async deleteOpportunity(id: string, soft: boolean = true): Promise<boolean> {
     if (soft) {
-      this.data.opportunities[idx].status = 'archived';
-    } else {
-      this.data.opportunities.splice(idx, 1);
+      const { error } = await supabase.from('opportunities').update({ status: 'archived' }).eq('id', id);
+      if (error) throw error;
+      return true;
     }
-    this.save();
+    const { error } = await supabase.from('opportunities').delete().eq('id', id);
+    if (error) throw error;
     return true;
   }
 
-  // --- REVIEW QUEUE (AI Discovered) ---
-  public getReviewQueue(): Opportunity[] {
-    return this.data.opportunities.filter((op) => op.verificationStatus === 'pending');
+  public async getReviewQueue(): Promise<Opportunity[]> {
+    const { data, error } = await supabase.from('opportunities').select('*').eq('verification_status', 'pending');
+    if (error) throw error;
+    return (data || []).map(rowToOpportunity);
   }
 
-  public approveOpportunity(id: string, updates?: Partial<Opportunity>): Opportunity | null {
-    return this.updateOpportunity(id, {
-      ...updates,
-      verificationStatus: 'verified',
-      status: 'open',
-    });
+  public async approveOpportunity(id: string, updates?: Partial<Opportunity>): Promise<Opportunity | null> {
+    return this.updateOpportunity(id, { ...updates, verificationStatus: 'verified', status: 'open' });
   }
 
-  public rejectOpportunity(id: string): Opportunity | null {
-    return this.updateOpportunity(id, {
-      verificationStatus: 'rejected',
-      status: 'archived',
-    });
+  public async rejectOpportunity(id: string): Promise<Opportunity | null> {
+    return this.updateOpportunity(id, { verificationStatus: 'rejected', status: 'archived' });
   }
 
   // --- USER & AUTH METHODS ---
-  public getUsers(): User[] {
-    return this.data.users;
+  public async getUsers(): Promise<User[]> {
+    const { data, error } = await supabase.from('users').select('*');
+    if (error) throw error;
+    return (data || []).map(rowToUser);
   }
 
-  public getUserById(id: string): User | undefined {
-    return this.data.users.find((u) => u.id === id);
+  public async getUserById(id: string): Promise<User | undefined> {
+    const { data, error } = await supabase.from('users').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data ? rowToUser(data) : undefined;
   }
 
-  public getUserByEmail(email: string): User | undefined {
-    return this.data.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  public async getUserByEmail(email: string): Promise<User | undefined> {
+    const { data, error } = await supabase.from('users').select('*').ilike('email', email).maybeSingle();
+    if (error) throw error;
+    return data ? rowToUser(data) : undefined;
   }
 
-  public createUser(userData: {
-    name: string;
-    email: string;
-    requestedRole: 'user' | 'admin';
-  }): { user: User; isAdminApproved: boolean } {
+  public async createUser(userData: { name: string; email: string; requestedRole: 'user' | 'admin' }): Promise<{ user: User; isAdminApproved: boolean }> {
     const normalizedEmail = userData.email.toLowerCase().trim();
-    // Verify allowlist server-side
     const isAuthorizedAdmin = ADMIN_ALLOWLIST.includes(normalizedEmail);
     const assignedRole = userData.requestedRole === 'admin' && isAuthorizedAdmin ? 'admin' : 'user';
 
-    const newUser: User = {
+    const newUserRow = {
       id: `usr-${Date.now()}`,
       name: userData.name,
       email: normalizedEmail,
       role: assignedRole,
-      avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&auto=format&fit=crop&q=80`,
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&auto=format&fit=crop&q=80',
       interests: ['AI/ML', 'Software Development'],
-      preferredDomains: ['AI/ML', 'Web Development'],
-      preferredTypes: ['hackathon', 'internship', 'research'],
+      preferred_domains: ['AI/ML', 'Web Development'],
+      preferred_types: ['hackathon', 'internship', 'research'],
       skills: ['Python', 'JavaScript'],
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      timezone: 'UTC',
       onboarded: false,
-      notificationPrefs: {
-        emailAlerts: true,
-        deadlineThresholds: [7, 3, 1],
-        frequency: 'every_3_days',
-      },
+      notification_prefs: { emailAlerts: true, deadlineThresholds: [7, 3, 1], frequency: 'every_3_days' },
     };
 
-    this.data.users.push(newUser);
-    this.save();
-    return { user: newUser, isAdminApproved: assignedRole === 'admin' };
+    const { data, error } = await supabase.from('users').insert(newUserRow).select().single();
+    if (error) throw error;
+    return { user: rowToUser(data), isAdminApproved: assignedRole === 'admin' };
   }
 
-  public updateUser(id: string, updates: Partial<User>): User | null {
-    const idx = this.data.users.findIndex((u) => u.id === id);
-    if (idx === -1) return null;
-    this.data.users[idx] = { ...this.data.users[idx], ...updates };
-    this.save();
-    return this.data.users[idx];
+  public async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
+    const { data, error } = await supabase.from('users').update(userToRow(updates)).eq('id', id).select().maybeSingle();
+    if (error) throw error;
+    return data ? rowToUser(data) : null;
   }
 
   // --- BOOKMARKS ---
-  public getBookmarks(userId: string): Opportunity[] {
-    const bmIds = this.data.bookmarks
-      .filter((b) => b.userId === userId)
-      .map((b) => b.opportunityId);
-    return this.data.opportunities.filter((op) => bmIds.includes(op.id));
+  public async getBookmarks(userId: string): Promise<Opportunity[]> {
+    const { data: bms, error } = await supabase.from('bookmarks').select('opportunity_id').eq('user_id', userId);
+    if (error) throw error;
+    const ids = (bms || []).map((b) => b.opportunity_id);
+    if (ids.length === 0) return [];
+    const { data, error: err2 } = await supabase.from('opportunities').select('*').in('id', ids);
+    if (err2) throw err2;
+    return (data || []).map(rowToOpportunity);
   }
 
-  public isBookmarked(userId: string, opportunityId: string): boolean {
-    return this.data.bookmarks.some(
-      (b) => b.userId === userId && b.opportunityId === opportunityId
-    );
+  public async isBookmarked(userId: string, opportunityId: string): Promise<boolean> {
+    const { data, error } = await supabase.from('bookmarks').select('id').eq('user_id', userId).eq('opportunity_id', opportunityId).maybeSingle();
+    if (error) throw error;
+    return !!data;
   }
 
-  public toggleBookmark(userId: string, opportunityId: string): { bookmarked: boolean; count: number } {
-    const idx = this.data.bookmarks.findIndex(
-      (b) => b.userId === userId && b.opportunityId === opportunityId
-    );
-    const op = this.data.opportunities.find((o) => o.id === opportunityId);
+  public async toggleBookmark(userId: string, opportunityId: string): Promise<{ bookmarked: boolean; count: number }> {
+    const existing = await supabase.from('bookmarks').select('id').eq('user_id', userId).eq('opportunity_id', opportunityId).maybeSingle();
+    const op = await this.getOpportunityById(opportunityId);
 
-    if (idx >= 0) {
-      this.data.bookmarks.splice(idx, 1);
-      if (op && op.bookmarksCount > 0) op.bookmarksCount--;
-      this.save();
-      return { bookmarked: false, count: op ? op.bookmarksCount : 0 };
+    if (existing.data) {
+      await supabase.from('bookmarks').delete().eq('id', existing.data.id);
+      const newCount = Math.max(0, (op?.bookmarksCount || 1) - 1);
+      if (op) await supabase.from('opportunities').update({ bookmarks_count: newCount }).eq('id', opportunityId);
+      return { bookmarked: false, count: newCount };
     } else {
-      this.data.bookmarks.push({
+      await supabase.from('bookmarks').insert({
         id: `bm-${Date.now()}`,
-        userId,
-        opportunityId,
-        createdAt: new Date().toISOString(),
+        user_id: userId,
+        opportunity_id: opportunityId,
+        created_at: new Date().toISOString(),
       });
-      if (op) op.bookmarksCount++;
-      this.save();
-      return { bookmarked: true, count: op ? op.bookmarksCount : 0 };
+      const newCount = (op?.bookmarksCount || 0) + 1;
+      if (op) await supabase.from('opportunities').update({ bookmarks_count: newCount }).eq('id', opportunityId);
+      return { bookmarked: true, count: newCount };
     }
   }
 
   // --- REMINDERS ---
-  public getReminders(userId: string): (Reminder & { opportunity?: Opportunity })[] {
-    return this.data.reminders
-      .filter((r) => r.userId === userId && r.active)
-      .map((r) => ({
-        ...r,
-        opportunity: this.data.opportunities.find((o) => o.id === r.opportunityId),
-      }));
+  public async getReminders(userId: string): Promise<(Reminder & { opportunity?: Opportunity })[]> {
+    const { data, error } = await supabase.from('reminders').select('*').eq('user_id', userId).eq('active', true);
+    if (error) throw error;
+    const reminders = (data || []).map(rowToReminder);
+    const result = [];
+    for (const r of reminders) {
+      const op = await this.getOpportunityById(r.opportunityId);
+      result.push({ ...r, opportunity: op });
+    }
+    return result;
   }
 
-  public createReminder(reminder: Omit<Reminder, 'id' | 'createdAt' | 'active'>): Reminder {
-    // Check if one already exists for this user + opportunity
-    const existing = this.data.reminders.find(
-      (r) => r.userId === reminder.userId && r.opportunityId === reminder.opportunityId
-    );
+  public async createReminder(reminder: Omit<Reminder, 'id' | 'createdAt' | 'active'>): Promise<Reminder> {
+    const { data: existing } = await supabase
+      .from('reminders')
+      .select('*')
+      .eq('user_id', reminder.userId)
+      .eq('opportunity_id', reminder.opportunityId)
+      .maybeSingle();
+
     if (existing) {
-      existing.daysBefore = reminder.daysBefore;
-      existing.frequency = reminder.frequency;
-      existing.preferredTime = reminder.preferredTime;
-      existing.timezone = reminder.timezone;
-      existing.active = true;
-      this.save();
-      return existing;
+      const { data, error } = await supabase
+        .from('reminders')
+        .update({
+          days_before: reminder.daysBefore,
+          frequency: reminder.frequency,
+          preferred_time: reminder.preferredTime,
+          timezone: reminder.timezone,
+          active: true,
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return rowToReminder(data);
     }
 
-    const newReminder: Reminder = {
-      ...reminder,
+    const newRow = {
       id: `rem-${Date.now()}`,
+      user_id: reminder.userId,
+      opportunity_id: reminder.opportunityId,
+      deadline: reminder.deadline,
+      days_before: reminder.daysBefore,
+      frequency: reminder.frequency,
+      preferred_time: reminder.preferredTime,
+      timezone: reminder.timezone,
       active: true,
-      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
-    this.data.reminders.push(newReminder);
-    this.save();
-    return newReminder;
+    const { data, error } = await supabase.from('reminders').insert(newRow).select().single();
+    if (error) throw error;
+    return rowToReminder(data);
   }
 
-  public deleteReminder(id: string): boolean {
-    const idx = this.data.reminders.findIndex((r) => r.id === id);
-    if (idx === -1) return false;
-    this.data.reminders.splice(idx, 1);
-    this.save();
+  public async deleteReminder(id: string): Promise<boolean> {
+    const { error } = await supabase.from('reminders').delete().eq('id', id);
+    if (error) throw error;
     return true;
   }
 
   // --- NOTIFICATIONS ---
-  public createNotification(data: Omit<NotificationItem, 'id' | 'createdAt'>): NotificationItem {
-    const newNotif: NotificationItem = {
-      ...data,
+  public async createNotification(data: Omit<NotificationItem, 'id' | 'createdAt'>): Promise<NotificationItem> {
+    const row = {
       id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      createdAt: new Date().toISOString(),
+      user_id: data.userId,
+      opportunity_id: data.opportunityId,
+      opportunity_name: data.opportunityName,
+      opportunity_category: data.opportunityCategory,
+      title: data.title,
+      message: data.message,
+      type: data.type,
+      read: data.read,
+      created_at: new Date().toISOString(),
     };
-    this.data.notifications.unshift(newNotif);
-    this.save();
-    return newNotif;
+    const { data: inserted, error } = await supabase.from('notifications').insert(row).select().single();
+    if (error) throw error;
+    return rowToNotification(inserted);
   }
 
-  public getNotifications(userId: string): NotificationItem[] {
-    return this.data.notifications
-      .filter((n) => n.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  public async getNotifications(userId: string): Promise<NotificationItem[]> {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(rowToNotification);
   }
 
-  public markNotificationRead(id: string): boolean {
-    const notif = this.data.notifications.find((n) => n.id === id);
-    if (notif) {
-      notif.read = true;
-      this.save();
-      return true;
-    }
-    return false;
+  public async markNotificationRead(id: string): Promise<boolean> {
+    const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
+    return !error;
   }
 
-  public markAllNotificationsRead(userId: string): void {
-    this.data.notifications.forEach((n) => {
-      if (n.userId === userId) n.read = true;
-    });
-    this.save();
+  public async markAllNotificationsRead(userId: string): Promise<void> {
+    await supabase.from('notifications').update({ read: true }).eq('user_id', userId);
   }
 
-  public dismissNotification(id: string): boolean {
-    const idx = this.data.notifications.findIndex((n) => n.id === id);
-    if (idx >= 0) {
-      this.data.notifications.splice(idx, 1);
-      this.save();
-      return true;
-    }
-    return false;
+  public async dismissNotification(id: string): Promise<boolean> {
+    const { error } = await supabase.from('notifications').delete().eq('id', id);
+    return !error;
   }
 
   // --- SCHEDULED CRON PROCESSORS ---
-  public processReminders(): { processed: number; notificationsCreated: number } {
+  public async processReminders(): Promise<{ processed: number; notificationsCreated: number }> {
+    const { data } = await supabase.from('reminders').select('*').eq('active', true);
+    const reminders = (data || []).map(rowToReminder);
     const now = new Date();
     let notificationsCreated = 0;
     let processed = 0;
 
-    for (const rem of this.data.reminders) {
-      if (!rem.active) continue;
+    for (const rem of reminders) {
       processed++;
-
-      const op = this.data.opportunities.find((o) => o.id === rem.opportunityId);
+      const op = await this.getOpportunityById(rem.opportunityId);
       if (!op || op.status === 'closed' || op.status === 'archived') {
-        rem.active = false;
+        await supabase.from('reminders').update({ active: false }).eq('id', rem.id);
         continue;
       }
 
       const deadlineDate = new Date(op.deadline + 'T23:59:59Z');
-      const diffMs = deadlineDate.getTime() - now.getTime();
-      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      const diffDays = Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-      // If deadline has passed, stop reminders
       if (diffDays < 0) {
-        rem.active = false;
+        await supabase.from('reminders').update({ active: false }).eq('id', rem.id);
         continue;
       }
 
-      // Check frequency rules:
       let shouldSend = false;
       const lastSent = rem.lastSentAt ? new Date(rem.lastSentAt) : null;
-      const daysSinceLastSent = lastSent
-        ? (now.getTime() - lastSent.getTime()) / (1000 * 60 * 60 * 24)
-        : 999;
+      const daysSinceLastSent = lastSent ? (now.getTime() - lastSent.getTime()) / (1000 * 60 * 60 * 24) : 999;
 
       if (rem.frequency === 'every_3_days') {
-        // Send every 3 days until deadline
-        if (daysSinceLastSent >= 3) {
-          shouldSend = true;
-        }
+        if (daysSinceLastSent >= 3) shouldSend = true;
       } else if (rem.frequency === 'once') {
-        // Send when within daysBefore threshold and not yet sent
-        if (!rem.lastSentAt && diffDays <= rem.daysBefore) {
-          shouldSend = true;
-        }
+        if (!rem.lastSentAt && diffDays <= rem.daysBefore) shouldSend = true;
       } else {
-        // Custom: threshold matches
-        if (diffDays <= rem.daysBefore && daysSinceLastSent >= 1) {
-          shouldSend = true;
-        }
+        if (diffDays <= rem.daysBefore && daysSinceLastSent >= 1) shouldSend = true;
       }
 
       if (shouldSend) {
-        const notif: NotificationItem = {
-          id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        await this.createNotification({
           userId: rem.userId,
           opportunityId: op.id,
           opportunityName: op.name,
@@ -638,232 +548,89 @@ class Store {
           message: `${op.name} (${op.organization}) closes in ${diffDays} day${diffDays === 1 ? '' : 's'}. Don't miss the submission cutoff!`,
           type: 'reminder',
           read: false,
-          createdAt: now.toISOString(),
-        };
-        this.data.notifications.unshift(notif);
-        rem.lastSentAt = now.toISOString();
+        });
+        await supabase.from('reminders').update({ last_sent_at: now.toISOString() }).eq('id', rem.id);
         notificationsCreated++;
       }
     }
 
-    this.save();
     return { processed, notificationsCreated };
   }
 
-  public checkExpiry(): { expiredCount: number } {
+  public async checkExpiry(): Promise<{ expiredCount: number }> {
+    const opportunities = await this.getOpportunities({ includePending: true });
     const now = new Date();
     let expiredCount = 0;
 
-    for (const op of this.data.opportunities) {
+    for (const op of opportunities) {
       const deadlineDate = new Date(op.deadline + 'T23:59:59Z');
       if (deadlineDate.getTime() < now.getTime() && op.status !== 'closed' && op.status !== 'archived') {
-        op.status = 'closed';
+        await supabase.from('opportunities').update({ status: 'closed' }).eq('id', op.id);
+        await supabase.from('reminders').update({ active: false }).eq('opportunity_id', op.id);
         expiredCount++;
-
-        // Deactivate active reminders for this opportunity
-        for (const rem of this.data.reminders) {
-          if (rem.opportunityId === op.id) {
-            rem.active = false;
-          }
-        }
       }
-    }
-
-    if (expiredCount > 0) {
-      this.save();
     }
     return { expiredCount };
   }
 
   // --- AI DISCOVERY PIPELINE (GEMINI INTEGRATION) ---
-  public async runAIDiscovery(category?: string): Promise<{
-    discoveredCount: number;
-    duplicatesSkipped: number;
-    items: Opportunity[];
-  }> {
+  public async runAIDiscovery(category?: string): Promise<{ discoveredCount: number; duplicatesSkipped: number; items: Opportunity[] }> {
     const cat = category || 'all';
     let discoveredItems: any[] = [];
     let duplicatesSkipped = 0;
 
     if (process.env.GEMINI_API_KEY) {
       try {
-        const ai = new GoogleGenAI({
-          apiKey: process.env.GEMINI_API_KEY,
-          httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
-        });
-
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
         const prompt = `You are the automated opportunity discovery engine for Nexup, an elite student opportunity intelligence platform.
 Find 3 to 4 realistic, high-quality upcoming opportunities for university students.
 Requested category: ${cat === 'all' ? 'a balanced mix of hackathon, internship, and research' : cat}.
 Current date context: September 2026.
 Deadlines must be in late 2026 or early 2027 (e.g. October 2026 to January 2027).
-
-Return a JSON array of objects adhering to this schema:
-- name: string
-- category: "hackathon" | "internship" | "research"
-- organization: string
-- description: string (2-3 sentences explaining the challenge/role/fellowship)
-- officialUrl: string
-- registrationUrl: string
-- startDate: string (YYYY-MM-DD)
-- endDate: string (YYYY-MM-DD)
-- deadline: string (YYYY-MM-DD)
-- location: string
-- mode: "online" | "offline" | "hybrid"
-- geography: "international" | "national" | "regional" | "university"
-- domains: array of strings (e.g. ["AI/ML", "Web Development", "Robotics", "FinTech", "Cybersecurity", "Research"])
-- skills: array of strings
-- eligibility: string
-- teamSize: string (if hackathon)
-- prizePool: string (if hackathon)
-- role: string (if internship)
-- duration: string (if internship)
-- stipend: string (if internship)
-- professor: string (if research)
-- institution: string (if research)
-- researchArea: string (if research)
-- funding: string (if research)
-- confidence: number between 0.85 and 0.98`;
+Return a JSON array matching the Opportunity fields (name, category, organization, description, officialUrl, registrationUrl, startDate, endDate, deadline, location, mode, geography, domains, skills, eligibility, teamSize, prizePool, role, duration, stipend, professor, institution, researchArea, funding, confidence).`;
 
         const response = await ai.models.generateContent({
           model: 'gemini-3.8-flash',
           contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  category: { type: Type.STRING },
-                  organization: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                  officialUrl: { type: Type.STRING },
-                  registrationUrl: { type: Type.STRING },
-                  startDate: { type: Type.STRING },
-                  endDate: { type: Type.STRING },
-                  deadline: { type: Type.STRING },
-                  location: { type: Type.STRING },
-                  mode: { type: Type.STRING },
-                  geography: { type: Type.STRING },
-                  domains: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  skills: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  eligibility: { type: Type.STRING },
-                  teamSize: { type: Type.STRING },
-                  prizePool: { type: Type.STRING },
-                  role: { type: Type.STRING },
-                  duration: { type: Type.STRING },
-                  stipend: { type: Type.STRING },
-                  professor: { type: Type.STRING },
-                  institution: { type: Type.STRING },
-                  researchArea: { type: Type.STRING },
-                  funding: { type: Type.STRING },
-                  confidence: { type: Type.NUMBER },
-                },
-                required: ['name', 'category', 'organization', 'deadline', 'officialUrl', 'description'],
-              },
-            },
-          },
+          config: { responseMimeType: 'application/json' },
         });
-
-        if (response.text) {
-          discoveredItems = JSON.parse(response.text);
-        }
+        if (response.text) discoveredItems = JSON.parse(response.text);
       } catch (err) {
-        console.error('Gemini discovery failed or key not available, using high-fidelity fallback discovery:', err);
+        console.error('Gemini discovery failed, using fallback:', err);
       }
     }
 
-    // High fidelity fallback discovery if Gemini returned empty or was unavailable
     if (!discoveredItems || discoveredItems.length === 0) {
       discoveredItems = [
         {
           name: 'Anthropic Claude Agentic Hackathon 2026',
           category: 'hackathon',
           organization: 'Anthropic AI & Lab49',
-          description: 'Build robust, tool-using computer-use agents that interact with APIs, web browsers, and enterprise databases. Focused on safety, alignment, and evaluation frameworks.',
+          description: 'Build robust, tool-using computer-use agents that interact with APIs, web browsers, and enterprise databases.',
           officialUrl: 'https://anthropic.com/hackathons/agentic-2026',
           registrationUrl: 'https://anthropic.com/hackathons/agentic-2026/register',
-          startDate: '2026-11-05',
-          endDate: '2026-11-07',
-          deadline: '2026-10-24',
-          location: 'San Francisco, CA & Online Stream',
-          mode: 'hybrid',
-          geography: 'international',
+          startDate: '2026-11-05', endDate: '2026-11-07', deadline: '2026-10-24',
+          location: 'San Francisco, CA & Online Stream', mode: 'hybrid', geography: 'international',
           domains: ['AI/ML', 'Software Development', 'Cybersecurity'],
           skills: ['Python', 'TypeScript', 'Claude API', 'Tool Calling'],
           eligibility: 'Open to university students and independent researchers worldwide.',
-          teamSize: '1-4 Members',
-          prizePool: '$85,000 in API Credits & Cash',
-          confidence: 0.96,
-        },
-        {
-          name: 'Distributed Cloud Storage Engineering Intern',
-          category: 'internship',
-          organization: 'Cloudflare',
-          description: 'Scale R2 object storage and Workers KV caching systems running on thousands of edge points of presence. Write high-concurrency Rust services with zero allocation overhead.',
-          officialUrl: 'https://www.cloudflare.com/careers/university',
-          registrationUrl: 'https://www.cloudflare.com/careers/jobs/intern-r2',
-          startDate: '2027-05-15',
-          endDate: '2027-08-15',
-          deadline: '2026-10-28',
-          location: 'San Francisco, CA / London / Remote',
-          mode: 'hybrid',
-          geography: 'international',
-          domains: ['Software Development', 'Cybersecurity', 'Web Development'],
-          skills: ['Rust', 'Go', 'Distributed Systems', 'HTTP/3', 'Linux'],
-          eligibility: 'Undergraduates or Master’s students graduating between Dec 2026 and June 2028.',
-          role: 'Systems Software Engineer Intern',
-          duration: '12 Weeks',
-          stipend: '$8,400/month + Full Medical & Remote Tech Allowance',
-          paidType: 'paid',
-          confidence: 0.94,
-        },
-        {
-          name: 'Autonomous Drone Swarm Perception Research',
-          category: 'research',
-          organization: 'ETH Zürich Autonomous Systems Lab (ASL)',
-          description: 'Investigate collaborative multi-agent SLAM and visual-inertial state estimation for micro-aerial drone swarms navigating GPS-denied alpine tunnel networks.',
-          officialUrl: 'https://asl.ethz.ch/research/summer-research',
-          registrationUrl: 'https://asl.ethz.ch/apply-student-research',
-          startDate: '2027-03-01',
-          endDate: '2027-08-31',
-          deadline: '2026-11-05',
-          location: 'Zürich, Switzerland',
-          mode: 'offline',
-          geography: 'international',
-          domains: ['Research', 'Robotics', 'AI/ML'],
-          skills: ['ROS 2', 'C++', 'Visual Inertial Odometry', 'Nonlinear Optimization'],
-          eligibility: 'Enrolled Bachelor or Master students in Robotics, Mechanical, or Electrical Engineering.',
-          professor: 'Prof. Roland Siegwart',
-          institution: 'ETH Zürich',
-          researchArea: 'Multi-UAV Collaborative Perception in Extreme Environments',
-          funding: 'CHF 2,200/month research scholarship + Swiss Rail Pass',
-          positionType: 'Fellowship',
-          confidence: 0.95,
+          teamSize: '1-4 Members', prizePool: '$85,000 in API Credits & Cash', confidence: 0.96,
         },
       ];
     }
 
+    const existingOps = await this.getOpportunities({ includePending: true });
     const newOpportunities: Opportunity[] = [];
 
     for (const item of discoveredItems) {
-      // Duplicate detection against existing URLs and title+org
-      const isDuplicate = this.data.opportunities.some(
+      const isDuplicate = existingOps.some(
         (existing) =>
-          existing.officialUrl.toLowerCase().replace(/\/$/, '') === item.officialUrl.toLowerCase().replace(/\/$/, '') ||
-          (existing.name.toLowerCase() === item.name.toLowerCase() &&
-            existing.organization.toLowerCase() === item.organization.toLowerCase())
+          existing.officialUrl.toLowerCase().replace(/\/$/, '') === (item.officialUrl || '').toLowerCase().replace(/\/$/, '') ||
+          (existing.name.toLowerCase() === item.name.toLowerCase() && existing.organization.toLowerCase() === item.organization.toLowerCase())
       );
+      if (isDuplicate) { duplicatesSkipped++; continue; }
 
-      if (isDuplicate) {
-        duplicatesSkipped++;
-        continue;
-      }
-
-      const newOp: Opportunity = {
-        id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      const created = await this.createOpportunity({
         category: item.category || 'hackathon',
         name: item.name,
         organization: item.organization,
@@ -881,12 +648,9 @@ Return a JSON array of objects adhering to this schema:
         skills: item.skills || ['Python', 'TypeScript'],
         eligibility: item.eligibility || 'Open to all enrolled university students.',
         status: 'open',
-        verificationStatus: 'pending', // Awaiting admin review!
+        verificationStatus: 'pending',
         source: 'Nexup AI Discovery Pipeline (Gemini 3.8)',
         confidence: item.confidence || 0.92,
-        bookmarksCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
         teamSize: item.teamSize,
         prizePool: item.prizePool,
         competitionType: item.competitionType || 'Hackathon',
@@ -899,72 +663,37 @@ Return a JSON array of objects adhering to this schema:
         researchArea: item.researchArea,
         funding: item.funding,
         positionType: item.positionType || 'Fellowship',
-      };
-
-      this.data.opportunities.unshift(newOp);
-      newOpportunities.push(newOp);
+      } as any);
+      newOpportunities.push(created);
     }
 
-    this.save();
-    return {
-      discoveredCount: newOpportunities.length,
-      duplicatesSkipped,
-      items: newOpportunities,
-    };
+    return { discoveredCount: newOpportunities.length, duplicatesSkipped, items: newOpportunities };
   }
 
-  public getGeminiApiKey(): string {
-    return this.customApiKey || process.env.GEMINI_API_KEY || '';
+  public async getGeminiApiKey(): Promise<string> {
+    const { data } = await supabase.from('settings').select('value').eq('key', 'gemini_api_key').maybeSingle();
+    return data?.value || process.env.GEMINI_API_KEY || '';
   }
 
-  public setGeminiApiKey(key: string): void {
-    this.customApiKey = key.trim();
-    process.env.GEMINI_API_KEY = key.trim();
-    try {
-      const envPath = path.join(process.cwd(), '.env');
-      let content = '';
-      if (fs.existsSync(envPath)) {
-        content = fs.readFileSync(envPath, 'utf-8');
-        if (content.includes('GEMINI_API_KEY=')) {
-          content = content.replace(/GEMINI_API_KEY=.*/, `GEMINI_API_KEY=${key.trim()}`);
-        } else {
-          content += `\nGEMINI_API_KEY=${key.trim()}\n`;
-        }
-      } else {
-        content = `GEMINI_API_KEY=${key.trim()}\n`;
-      }
-      fs.writeFileSync(envPath, content, 'utf-8');
-    } catch (e) {
-      console.warn('Could not persist key to .env file:', e);
-    }
+  public async setGeminiApiKey(key: string): Promise<void> {
+    const trimmed = key.trim();
+    process.env.GEMINI_API_KEY = trimmed;
+    await supabase.from('settings').upsert({ key: 'gemini_api_key', value: trimmed });
   }
 
   // --- AI PDF & LINK EXTRACTION PIPELINE ---
   public async extractOpportunitiesFromContent(params: {
-    pdfBase64?: string;
-    text?: string;
-    urls?: string[];
-    apiKey?: string;
-    category?: string;
-    useFallbackSample?: boolean;
-  }): Promise<{
-    discoveredCount: number;
-    duplicatesSkipped: number;
-    items: Opportunity[];
-    limitExceeded?: boolean;
-    warning?: string;
-  }> {
-    const activeApiKey = (params.apiKey || '').trim() || this.getGeminiApiKey();
+    pdfBase64?: string; text?: string; urls?: string[]; apiKey?: string; category?: string; useFallbackSample?: boolean;
+  }): Promise<{ discoveredCount: number; duplicatesSkipped: number; items: Opportunity[]; limitExceeded?: boolean; warning?: string }> {
+    const activeApiKey = (params.apiKey || '').trim() || (await this.getGeminiApiKey());
     let extractedText = params.text || '';
 
-    // If PDF base64 provided, parse using PDFParse
     if (params.pdfBase64) {
       try {
         const buffer = Buffer.from(params.pdfBase64, 'base64');
         const pdfResult = await extractTextFromPdfBuffer(buffer);
         extractedText += (extractedText ? '\n\n' : '') + pdfResult.text;
       } catch (pdfErr: any) {
-        console.error('Error parsing PDF buffer:', pdfErr);
         if (!extractedText && !params.urls?.length && !params.useFallbackSample) {
           throw new Error(`Failed to extract text from PDF: ${pdfErr.message}`);
         }
@@ -979,187 +708,88 @@ Return a JSON array of objects adhering to this schema:
     let limitExceeded = false;
     let limitMessage = '';
 
-    // If user explicitly chose sample or if Gemini call is bypassed
     if (params.useFallbackSample) {
       parsedItems = [...SAMPLE_SEPTEMBER_2026_HACKATHONS];
+    } else if (!activeApiKey) {
+      limitExceeded = true;
+      limitMessage = 'limit of ai exceeded pls use new api key';
+      parsedItems = parseOpportunitiesFallback(extractedText, 'Heuristic PDF/Link Parser');
+      if (parsedItems.length === 0) {
+        const err: any = new Error(limitMessage);
+        err.limitExceeded = true;
+        err.status = 429;
+        throw err;
+      }
     } else {
-      // Check if API key is present
-      if (!activeApiKey) {
-        limitExceeded = true;
-        limitMessage = 'limit of ai exceeded pls use new api key';
-        // Run heuristic fallback parser on extracted text so data is not lost
-        parsedItems = parseOpportunitiesFallback(extractedText, 'Heuristic PDF/Link Parser');
-        if (parsedItems.length === 0) {
-          const err: any = new Error('limit of ai exceeded pls use new api key');
-          err.limitExceeded = true;
-          err.status = 429;
-          throw err;
-        }
-      } else {
-        // Try Gemini with AI Studio / GenAI
-        try {
-          const ai = new GoogleGenAI({
-            apiKey: activeApiKey,
-            httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
-          });
-
-          const prompt = `You are Nexup's AI Opportunity Extraction Engine.
-Analyze the following document/links containing hackathons and university student opportunities (context: September 2026 and upcoming 2026-2027 seasons).
-Extract ALL individual hackathons, challenges, datathons, or student competitions mentioned.
-
+      try {
+        const ai = new GoogleGenAI({ apiKey: activeApiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+        const prompt = `You are Nexup's AI Opportunity Extraction Engine.
+Analyze the following document/links containing hackathons and student opportunities.
 Document/Links content:
 """
 ${extractedText.slice(0, 40000)}
 """
+Return a JSON array of opportunities with fields: name, category, organization, description, officialUrl, registrationUrl, startDate, endDate, deadline, location, mode, geography, domains, skills, eligibility, prizePool, confidence.`;
 
-For each opportunity extracted, return a JSON object with:
-- name: string (exact competition/hackathon title)
-- category: "hackathon" | "internship" | "research" (default: "hackathon")
-- organization: string (organizing company, institution, university or foundation)
-- description: string (clear 2-3 sentence overview of challenge, themes, technology, and what participants will build)
-- officialUrl: string (official link or devpost/unstop/portal URL)
-- registrationUrl: string (registration URL or official link)
-- startDate: string (YYYY-MM-DD or estimated)
-- endDate: string (YYYY-MM-DD or estimated)
-- deadline: string (YYYY-MM-DD - deadline for registration/submission)
-- location: string (e.g. "Online / Global", "San Francisco, CA", "Hybrid", etc.)
-- mode: "online" | "offline" | "hybrid"
-- geography: "international" | "national" | "regional" | "university"
-- domains: array of strings (e.g. ["AI/ML", "Web Development", "Robotics", "Cloud", "Cybersecurity", "Healthcare", "FinTech"])
-- skills: array of strings (e.g. ["Python", "TypeScript", "React", "PyTorch"])
-- eligibility: string (e.g. "Undergraduate/graduate students globally, 18+")
-- prizePool: string (e.g. "$50,000 cash", "₹20 lakh total", etc.)
-- confidence: number between 0.90 and 0.99
+        const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+        let responseText = '';
+        let lastGeminiErr: any = null;
 
-Extract as many valid opportunities as found. Ensure all URLs and deadlines are accurate.`;
-
-          const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
-          let responseText = '';
-          let lastGeminiErr: any = null;
-
-          for (const model of modelsToTry) {
-            try {
-              const resp = await ai.models.generateContent({
-                model,
-                contents: prompt,
-                config: {
-                  responseMimeType: 'application/json',
-                  responseSchema: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        name: { type: Type.STRING },
-                        category: { type: Type.STRING },
-                        organization: { type: Type.STRING },
-                        description: { type: Type.STRING },
-                        officialUrl: { type: Type.STRING },
-                        registrationUrl: { type: Type.STRING },
-                        startDate: { type: Type.STRING },
-                        endDate: { type: Type.STRING },
-                        deadline: { type: Type.STRING },
-                        location: { type: Type.STRING },
-                        mode: { type: Type.STRING },
-                        geography: { type: Type.STRING },
-                        domains: { type: Type.ARRAY, items: { type: Type.STRING } },
-                        skills: { type: Type.ARRAY, items: { type: Type.STRING } },
-                        eligibility: { type: Type.STRING },
-                        prizePool: { type: Type.STRING },
-                        confidence: { type: Type.NUMBER },
-                      },
-                      required: ['name', 'organization', 'officialUrl', 'description'],
-                    },
-                  },
-                },
-              });
-              if (resp.text) {
-                responseText = resp.text;
-                break;
-              }
-            } catch (gErr: any) {
-              lastGeminiErr = gErr;
-              const errMsg = (gErr.message || '').toLowerCase();
-              if (
-                gErr.status === 429 ||
-                gErr.code === 429 ||
-                errMsg.includes('resource_exhausted') ||
-                errMsg.includes('quota') ||
-                errMsg.includes('rate limit') ||
-                errMsg.includes('limit')
-              ) {
-                limitExceeded = true;
-                limitMessage = 'limit of ai exceeded pls use new api key';
-                break;
-              }
+        for (const model of modelsToTry) {
+          try {
+            const resp = await ai.models.generateContent({ model, contents: prompt, config: { responseMimeType: 'application/json' } });
+            if (resp.text) { responseText = resp.text; break; }
+          } catch (gErr: any) {
+            lastGeminiErr = gErr;
+            const errMsg = (gErr.message || '').toLowerCase();
+            if (gErr.status === 429 || errMsg.includes('quota') || errMsg.includes('rate limit')) {
+              limitExceeded = true;
+              limitMessage = 'limit of ai exceeded pls use new api key';
+              break;
             }
           }
+        }
 
-          if (responseText) {
-            parsedItems = JSON.parse(responseText);
-          } else if (limitExceeded) {
-            parsedItems = parseOpportunitiesFallback(extractedText, 'Heuristic PDF/Link Parser');
-            if (parsedItems.length === 0) {
-              const err: any = new Error('limit of ai exceeded pls use new api key');
-              err.limitExceeded = true;
-              err.status = 429;
-              throw err;
-            }
-          } else if (lastGeminiErr) {
-            console.warn('Gemini extraction failed, attempting fallback parser:', lastGeminiErr);
-            parsedItems = parseOpportunitiesFallback(extractedText, 'Heuristic PDF/Link Parser');
-            if (parsedItems.length === 0) {
-              throw lastGeminiErr;
-            }
+        if (responseText) {
+          parsedItems = JSON.parse(responseText);
+        } else if (limitExceeded || lastGeminiErr) {
+          parsedItems = parseOpportunitiesFallback(extractedText, 'Heuristic PDF/Link Parser');
+          if (parsedItems.length === 0 && lastGeminiErr) throw lastGeminiErr;
+        }
+      } catch (err: any) {
+        const errMsg = (err.message || '').toLowerCase();
+        if (err.status === 429 || errMsg.includes('quota') || errMsg.includes('rate limit') || err.limitExceeded) {
+          limitExceeded = true;
+          limitMessage = 'limit of ai exceeded pls use new api key';
+          parsedItems = parseOpportunitiesFallback(extractedText, 'Heuristic PDF/Link Parser');
+          if (parsedItems.length === 0) {
+            const finalErr: any = new Error(limitMessage);
+            finalErr.limitExceeded = true;
+            finalErr.status = 429;
+            throw finalErr;
           }
-        } catch (err: any) {
-          const errMsg = (err.message || '').toLowerCase();
-          if (
-            err.status === 429 ||
-            err.code === 429 ||
-            errMsg.includes('resource_exhausted') ||
-            errMsg.includes('quota') ||
-            errMsg.includes('rate limit') ||
-            errMsg.includes('limit') ||
-            err.limitExceeded
-          ) {
-            limitExceeded = true;
-            limitMessage = 'limit of ai exceeded pls use new api key';
-            parsedItems = parseOpportunitiesFallback(extractedText, 'Heuristic PDF/Link Parser');
-            if (parsedItems.length === 0) {
-              const finalErr: any = new Error('limit of ai exceeded pls use new api key');
-              finalErr.limitExceeded = true;
-              finalErr.status = 429;
-              throw finalErr;
-            }
-          } else {
-            throw err;
-          }
+        } else {
+          throw err;
         }
       }
     }
 
-    // Format and ingest into this.data.opportunities as pending review items
+    const existingOps = await this.getOpportunities({ includePending: true });
     const newOpportunities: Opportunity[] = [];
     let duplicatesSkipped = 0;
 
     for (const item of parsedItems) {
       if (!item.name || !item.officialUrl) continue;
-
       const normUrl = item.officialUrl.toLowerCase().replace(/\/$/, '');
-      const isDuplicate = this.data.opportunities.some(
+      const isDuplicate = existingOps.some(
         (existing) =>
           existing.officialUrl.toLowerCase().replace(/\/$/, '') === normUrl ||
           (existing.name.toLowerCase().trim() === item.name.toLowerCase().trim() &&
             existing.organization.toLowerCase().trim() === (item.organization || '').toLowerCase().trim())
       );
+      if (isDuplicate) { duplicatesSkipped++; continue; }
 
-      if (isDuplicate) {
-        duplicatesSkipped++;
-        continue;
-      }
-
-      const newOp: Opportunity = {
-        id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      const created = await this.createOpportunity({
         category: (item.category as any) || 'hackathon',
         name: item.name.trim(),
         organization: item.organization?.trim() || 'Organizer',
@@ -1177,98 +807,32 @@ Extract as many valid opportunities as found. Ensure all URLs and deadlines are 
         skills: Array.isArray(item.skills) && item.skills.length > 0 ? item.skills : ['Python', 'TypeScript'],
         eligibility: item.eligibility || 'Open to all students worldwide.',
         status: 'open',
-        verificationStatus: 'pending', // PUSHED TO AI DISCOVERY REVIEW QUEUE FOR HUMAN VERIFICATION!
+        verificationStatus: 'pending',
         source: limitExceeded ? 'AI PDF Extractor (Heuristic Fallback)' : 'AI PDF / Link Extractor',
         confidence: typeof item.confidence === 'number' ? item.confidence : 0.94,
-        bookmarksCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
         prizePool: item.prizePool || undefined,
         competitionType: item.competitionType || 'Hackathon',
-      };
-
-      this.data.opportunities.unshift(newOp);
-      newOpportunities.push(newOp);
+      } as any);
+      newOpportunities.push(created);
     }
 
-    if (newOpportunities.length > 0) {
-      this.save();
-    }
-
-    return {
-      discoveredCount: newOpportunities.length,
-      duplicatesSkipped,
-      items: newOpportunities,
-      limitExceeded,
-      warning: limitExceeded ? limitMessage : undefined,
-    };
+    return { discoveredCount: newOpportunities.length, duplicatesSkipped, items: newOpportunities, limitExceeded, warning: limitExceeded ? limitMessage : undefined };
   }
 
   // --- AI ELIGIBILITY CHECKER ---
-  public async checkEligibility(opportunityId: string, userProfile: {
-    skills: string[];
-    education?: string;
-    interests: string[];
-    experienceLevel?: string;
-  }): Promise<EligibilityResult> {
-    const op = this.getOpportunityById(opportunityId);
-    if (!op) {
-      throw new Error('Opportunity not found');
-    }
+  public async checkEligibility(opportunityId: string, userProfile: { skills: string[]; education?: string; interests: string[]; experienceLevel?: string }): Promise<EligibilityResult> {
+    const op = await this.getOpportunityById(opportunityId);
+    if (!op) throw new Error('Opportunity not found');
 
     if (process.env.GEMINI_API_KEY) {
       try {
-        const ai = new GoogleGenAI({
-          apiKey: process.env.GEMINI_API_KEY,
-          httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
-        });
-
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
         const prompt = `You are Nexup's AI Student Opportunity Advisor.
-Analyze how well this student fits the specified opportunity. Provide a realistic, encouraging evaluation.
+OPPORTUNITY: ${op.name} at ${op.organization}. Eligibility: ${op.eligibility}. Skills: ${op.skills.join(', ')}. Domains: ${op.domains.join(', ')}. Description: ${op.description}
+STUDENT: Skills: ${userProfile.skills.join(', ')}. Education: ${userProfile.education || 'Undergraduate'}. Interests: ${userProfile.interests.join(', ')}.
+Return JSON: score (0-100), verdict, summary, strengths[], gaps[], recommendations[].`;
 
-OPPORTUNITY:
-Name: ${op.name}
-Category: ${op.category}
-Organization: ${op.organization}
-Eligibility Requirements: ${op.eligibility}
-Target Skills: ${op.skills.join(', ')}
-Domains: ${op.domains.join(', ')}
-Description: ${op.description}
-
-STUDENT PROFILE:
-Skills: ${userProfile.skills.join(', ') || 'Not specified'}
-Education: ${userProfile.education || 'Undergraduate student'}
-Interests: ${userProfile.interests.join(', ') || 'Software, AI'}
-Experience: ${userProfile.experienceLevel || 'Intermediate'}
-
-Return structured JSON with:
-- score: integer between 0 and 100 representing readiness match
-- verdict: "High Match" | "Moderate Match" | "Needs Preparation" | "Ineligible"
-- summary: 2 concise sentences outlining the match
-- strengths: array of 2-3 matched skills or qualifying attributes
-- gaps: array of 1-3 missing skills or prerequisite steps
-- recommendations: array of 2-3 actionable advice steps to boost chances`;
-
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                score: { type: Type.INTEGER },
-                verdict: { type: Type.STRING },
-                summary: { type: Type.STRING },
-                strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
-                gaps: { type: Type.ARRAY, items: { type: Type.STRING } },
-                recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
-              },
-              required: ['score', 'verdict', 'summary', 'strengths', 'gaps', 'recommendations'],
-            },
-          },
-        });
-
+        const response = await ai.models.generateContent({ model: 'gemini-3.8-flash', contents: prompt, config: { responseMimeType: 'application/json' } });
         if (response.text) {
           const parsed = JSON.parse(response.text);
           return {
@@ -1281,344 +845,180 @@ Return structured JSON with:
           };
         }
       } catch (err) {
-        console.error('Gemini eligibility analysis error, using algorithmic fallback:', err);
+        console.error('Gemini eligibility error, using fallback:', err);
       }
     }
 
-    // Algorithmic fallback
-    const matchedSkills = op.skills.filter((s) =>
-      userProfile.skills.some((us) => us.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(us.toLowerCase()))
-    );
+    const matchedSkills = op.skills.filter((s) => userProfile.skills.some((us) => us.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(us.toLowerCase())));
     const missingSkills = op.skills.filter((s) => !matchedSkills.includes(s));
     const ratio = op.skills.length > 0 ? matchedSkills.length / op.skills.length : 0.8;
     const score = Math.round(55 + ratio * 40);
-
     let verdict: EligibilityResult['verdict'] = 'Moderate Match';
     if (score >= 82) verdict = 'High Match';
     else if (score <= 50) verdict = 'Needs Preparation';
 
     return {
-      score,
-      verdict,
-      summary: `You match ${matchedSkills.length} key skills required by ${op.organization}. Your academic background aligns well with the general eligibility criteria.`,
-      strengths: matchedSkills.length > 0 ? matchedSkills : ['Strong foundational STEM background', 'Relevant domain enthusiasm'],
+      score, verdict,
+      summary: `You match ${matchedSkills.length} key skills required by ${op.organization}.`,
+      strengths: matchedSkills.length > 0 ? matchedSkills : ['Strong foundational STEM background'],
       gaps: missingSkills.length > 0 ? missingSkills.slice(0, 3) : ['Advanced project portfolio pieces'],
       recommendations: [
         'Highlight your hands-on projects demonstrating the matched skills on GitHub.',
         `Review the official prerequisites on ${op.organization}'s application page before submitting.`,
-        'Tailor your resume bullets to mention specific technologies requested in the listing.'
+        'Tailor your resume bullets to mention specific technologies requested in the listing.',
       ],
     };
   }
 
-  // ==========================================
-  // --- ADMIN MANAGEMENT & ACCESS WORKFLOW ---
-  // ==========================================
-
-  private loadAdmins() {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      if (fs.existsSync(ADMINS_FILE)) {
-        const raw = fs.readFileSync(ADMINS_FILE, 'utf-8');
-        this.admins = JSON.parse(raw);
-      } else {
-        this.admins = [...DEFAULT_PRIMARY_ADMINS];
-        this.saveAdmins();
-      }
-
-      // Guarantee primary admins always exist in admins.json
-      let modified = false;
-      for (const primary of DEFAULT_PRIMARY_ADMINS) {
-        const existingIdx = this.admins.findIndex(
-          (a) => a.email.toLowerCase() === primary.email.toLowerCase()
-        );
-        if (existingIdx === -1) {
-          this.admins.push(primary);
-          modified = true;
-        } else {
-          if (!this.admins[existingIdx].isPrimary) {
-            this.admins[existingIdx].isPrimary = true;
-            modified = true;
-          }
-        }
-      }
-      if (modified) {
-        this.saveAdmins();
-      }
-    } catch (err) {
-      console.warn('Could not read admins.json file, using default primary admins:', err);
-      this.admins = [...DEFAULT_PRIMARY_ADMINS];
-    }
+  // --- ADMIN MANAGEMENT ---
+  public async getAdmins(): Promise<AdminRecord[]> {
+    const { data, error } = await supabase.from('admins').select('*');
+    if (error) throw error;
+    return (data || []).map(rowToAdmin);
   }
 
-  public saveAdmins() {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      fs.writeFileSync(ADMINS_FILE, JSON.stringify(this.admins, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('Failed to save admins.json:', err);
-    }
+  public async getAdminByEmail(email: string): Promise<AdminRecord | undefined> {
+    const { data, error } = await supabase.from('admins').select('*').ilike('email', email.trim()).maybeSingle();
+    if (error) throw error;
+    return data ? rowToAdmin(data) : undefined;
   }
 
-  private loadAdminRequests() {
-    try {
-      if (fs.existsSync(ADMIN_REQUESTS_FILE)) {
-        const raw = fs.readFileSync(ADMIN_REQUESTS_FILE, 'utf-8');
-        this.adminRequests = JSON.parse(raw);
-      } else {
-        this.adminRequests = [];
-      }
-      this.cleanExpiredRequests();
-    } catch (err) {
-      this.adminRequests = [];
-    }
+  public async isEmailAdmin(email: string): Promise<boolean> {
+    return !!(await this.getAdminByEmail(email));
   }
 
-  public saveAdminRequests() {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      fs.writeFileSync(ADMIN_REQUESTS_FILE, JSON.stringify(this.adminRequests, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('Failed to save admin_requests.json:', err);
-    }
-  }
-
-  public cleanExpiredRequests() {
-    const now = Date.now();
-    let changed = false;
-    for (const req of this.adminRequests) {
-      if (req.status === 'pending' && new Date(req.expiresAt).getTime() <= now) {
-        req.status = 'expired';
-        changed = true;
-      }
-    }
-    if (changed) {
-      this.saveAdminRequests();
-    }
-  }
-
-  public getAdmins(): AdminRecord[] {
-    return [...this.admins];
-  }
-
-  public getAdminByEmail(email: string): AdminRecord | undefined {
-    const normalized = email.toLowerCase().trim();
-    return this.admins.find((a) => a.email.toLowerCase() === normalized);
-  }
-
-  public isEmailAdmin(email: string): boolean {
-    const normalized = email.toLowerCase().trim();
-    return this.admins.some((a) => a.email.toLowerCase() === normalized);
-  }
-
-  public isPrimaryAdmin(email: string): boolean {
+  public async isPrimaryAdmin(email: string): Promise<boolean> {
     const normalized = email.toLowerCase().trim();
     if (PRIMARY_ADMIN_EMAILS.includes(normalized)) return true;
-    const admin = this.getAdminByEmail(normalized);
+    const admin = await this.getAdminByEmail(normalized);
     return !!admin?.isPrimary;
   }
 
-  public validateAdmin(email: string, password: string): { valid: boolean; admin?: AdminRecord; reason?: string } {
-    const normalized = email.toLowerCase().trim();
-    const admin = this.getAdminByEmail(normalized);
-    if (!admin) {
-      return { valid: false, reason: 'not_in_admin_list' };
-    }
-    if (admin.password !== password) {
-      return { valid: false, reason: 'incorrect_password' };
-    }
+  public async validateAdmin(email: string, password: string): Promise<{ valid: boolean; admin?: AdminRecord; reason?: string }> {
+    const admin = await this.getAdminByEmail(email);
+    if (!admin) return { valid: false, reason: 'not_in_admin_list' };
+    if (admin.password !== password) return { valid: false, reason: 'incorrect_password' };
     return { valid: true, admin };
   }
 
-  public addAdmin(data: {
-    email: string;
-    password?: string;
-    name?: string;
-    addedBy?: string;
-  }): { success: boolean; admin?: AdminRecord; error?: string } {
+  public async addAdmin(data: { email: string; password?: string; name?: string; addedBy?: string }): Promise<{ success: boolean; admin?: AdminRecord; error?: string }> {
     const normalized = data.email.toLowerCase().trim();
-    if (!normalized || !normalized.includes('@')) {
-      return { success: false, error: 'A valid email address is required' };
-    }
-
-    if (this.isEmailAdmin(normalized)) {
-      return { success: false, error: 'An administrator with this email is already registered' };
-    }
+    if (!normalized || !normalized.includes('@')) return { success: false, error: 'A valid email address is required' };
+    if (await this.isEmailAdmin(normalized)) return { success: false, error: 'An administrator with this email is already registered' };
 
     const isPrimary = PRIMARY_ADMIN_EMAILS.includes(normalized);
-    const newAdmin: AdminRecord = {
+    const newAdminRow = {
       email: normalized,
       password: data.password || 'admin@2026',
       name: data.name || normalized.split('@')[0],
-      isPrimary,
-      addedBy: data.addedBy || 'Primary Administrator',
-      addedAt: new Date().toISOString(),
+      is_primary: isPrimary,
+      added_by: data.addedBy || 'Primary Administrator',
+      added_at: new Date().toISOString(),
     };
+    const { data: inserted, error } = await supabase.from('admins').insert(newAdminRow).select().single();
+    if (error) throw error;
 
-    this.admins.push(newAdmin);
-    this.saveAdmins();
-
-    // Ensure User entry exists and has admin role
-    let user = this.getUserByEmail(normalized);
+    let user = await this.getUserByEmail(normalized);
     if (!user) {
-      const created = this.createUser({
-        name: newAdmin.name,
-        email: normalized,
-        requestedRole: 'admin',
-      });
-      user = created.user;
+      await this.createUser({ name: newAdminRow.name, email: normalized, requestedRole: 'admin' });
     } else if (user.role !== 'admin') {
-      this.updateUser(user.id, { role: 'admin' });
+      await this.updateUser(user.id, { role: 'admin' });
     }
 
-    return { success: true, admin: newAdmin };
+    return { success: true, admin: rowToAdmin(inserted) };
   }
 
-  public updateAdminPassword(email: string, newPassword: string): { success: boolean; error?: string } {
-    const normalized = email.toLowerCase().trim();
-    const admin = this.getAdminByEmail(normalized);
-    if (!admin) {
-      return { success: false, error: 'Administrator not found in records' };
-    }
-    if (!newPassword || newPassword.length < 4) {
-      return { success: false, error: 'Password must be at least 4 characters long' };
-    }
-
-    admin.password = newPassword;
-    this.saveAdmins();
+  public async updateAdminPassword(email: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    const admin = await this.getAdminByEmail(email);
+    if (!admin) return { success: false, error: 'Administrator not found in records' };
+    if (!newPassword || newPassword.length < 4) return { success: false, error: 'Password must be at least 4 characters long' };
+    await supabase.from('admins').update({ password: newPassword }).eq('email', email.toLowerCase().trim());
     return { success: true };
   }
 
-  public removeAdmin(email: string): { success: boolean; error?: string } {
+  public async removeAdmin(email: string): Promise<{ success: boolean; error?: string }> {
     const normalized = email.toLowerCase().trim();
-    if (PRIMARY_ADMIN_EMAILS.includes(normalized)) {
-      return { success: false, error: 'Primary administrators (pratikpanda2006@gmail.com & freeuser13012026@gmail.com) cannot be removed' };
-    }
-
-    const idx = this.admins.findIndex((a) => a.email.toLowerCase() === normalized);
-    if (idx === -1) {
-      return { success: false, error: 'Administrator not found' };
-    }
-
-    this.admins.splice(idx, 1);
-    this.saveAdmins();
-
-    // Demote user role in DB
-    const user = this.getUserByEmail(normalized);
-    if (user) {
-      this.updateUser(user.id, { role: 'user' });
-    }
-
+    if (PRIMARY_ADMIN_EMAILS.includes(normalized)) return { success: false, error: 'Primary administrators cannot be removed' };
+    const admin = await this.getAdminByEmail(normalized);
+    if (!admin) return { success: false, error: 'Administrator not found' };
+    await supabase.from('admins').delete().eq('email', normalized);
+    const user = await this.getUserByEmail(normalized);
+    if (user) await this.updateUser(user.id, { role: 'user' });
     return { success: true };
   }
 
-  public createAdminAccessRequest(email: string, name?: string): AdminAccessRequest {
-    this.cleanExpiredRequests();
-    const normalized = email.toLowerCase().trim();
+  public async cleanExpiredRequests(): Promise<void> {
+    await supabase.from('admin_requests').update({ status: 'expired' }).lt('expires_at', new Date().toISOString()).eq('status', 'pending');
+  }
 
-    // Check if there is already an active pending request
-    const existing = this.adminRequests.find(
-      (r) => r.email.toLowerCase() === normalized && r.status === 'pending'
-    );
-    if (existing) {
-      return existing;
-    }
+  public async createAdminAccessRequest(email: string, name?: string): Promise<AdminAccessRequest> {
+    await this.cleanExpiredRequests();
+    const normalized = email.toLowerCase().trim();
+    const { data: existing } = await supabase.from('admin_requests').select('*').ilike('email', normalized).eq('status', 'pending').maybeSingle();
+    if (existing) return rowToAdminRequest(existing);
 
     const now = new Date();
-    // 10 minutes timeout window
     const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
-
-    const newReq: AdminAccessRequest = {
+    const newReqRow = {
       id: `req-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       email: normalized,
       name: name || normalized.split('@')[0],
-      requestedAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
+      requested_at: now.toISOString(),
+      expires_at: expiresAt.toISOString(),
       status: 'pending',
     };
+    const { data: inserted, error } = await supabase.from('admin_requests').insert(newReqRow).select().single();
+    if (error) throw error;
 
-    this.adminRequests.unshift(newReq);
-    this.saveAdminRequests();
-
-    // Create system notification for primary admin freeuser13012026@gmail.com & pratikpanda2006@gmail.com
-    const primaryUsers = this.data.users.filter((u) =>
-      PRIMARY_ADMIN_EMAILS.includes(u.email.toLowerCase())
-    );
+    const users = await this.getUsers();
+    const primaryUsers = users.filter((u) => PRIMARY_ADMIN_EMAILS.includes(u.email.toLowerCase()));
     for (const pUser of primaryUsers) {
-      this.createNotification({
+      await this.createNotification({
         userId: pUser.id,
         title: 'New Admin Permission Request',
-        message: `${newReq.email} requested admin mode access. Please review within 10 minutes.`,
+        message: `${normalized} requested admin mode access. Please review within 10 minutes.`,
         type: 'system',
         read: false,
-      });
+      } as any);
     }
 
-    return newReq;
+    return rowToAdminRequest(inserted);
   }
 
-  public getAdminAccessRequests(): AdminAccessRequest[] {
-    this.cleanExpiredRequests();
-    return [...this.adminRequests];
+  public async getAdminAccessRequests(): Promise<AdminAccessRequest[]> {
+    await this.cleanExpiredRequests();
+    const { data, error } = await supabase.from('admin_requests').select('*');
+    if (error) throw error;
+    return (data || []).map(rowToAdminRequest);
   }
 
-  public getAdminAccessRequestById(id: string): AdminAccessRequest | undefined {
-    this.cleanExpiredRequests();
-    return this.adminRequests.find((r) => r.id === id);
+  public async getAdminAccessRequestById(id: string): Promise<AdminAccessRequest | undefined> {
+    await this.cleanExpiredRequests();
+    const { data } = await supabase.from('admin_requests').select('*').eq('id', id).maybeSingle();
+    return data ? rowToAdminRequest(data) : undefined;
   }
 
-  public getAdminAccessRequestByEmail(email: string): AdminAccessRequest | undefined {
-    this.cleanExpiredRequests();
-    const normalized = email.toLowerCase().trim();
-    return this.adminRequests.find(
-      (r) => r.email.toLowerCase() === normalized && (r.status === 'pending' || r.status === 'rejected' || r.status === 'accepted')
-    );
+  public async getAdminAccessRequestByEmail(email: string): Promise<AdminAccessRequest | undefined> {
+    await this.cleanExpiredRequests();
+    const { data } = await supabase.from('admin_requests').select('*').ilike('email', email.trim()).in('status', ['pending', 'rejected', 'accepted']).maybeSingle();
+    return data ? rowToAdminRequest(data) : undefined;
   }
 
-  public acceptAdminAccessRequest(id: string, reviewedBy: string): { success: boolean; admin?: AdminRecord; error?: string } {
-    this.cleanExpiredRequests();
-    const req = this.adminRequests.find((r) => r.id === id);
-    if (!req) {
-      return { success: false, error: 'Admin permission request not found' };
-    }
-    if (req.status === 'expired') {
-      return { success: false, error: 'Request has expired (10-minute window passed)' };
-    }
+  public async acceptAdminAccessRequest(id: string, reviewedBy: string): Promise<{ success: boolean; admin?: AdminRecord; error?: string }> {
+    await this.cleanExpiredRequests();
+    const req = await this.getAdminAccessRequestById(id);
+    if (!req) return { success: false, error: 'Admin permission request not found' };
+    if (req.status === 'expired') return { success: false, error: 'Request has expired (10-minute window passed)' };
 
-    req.status = 'accepted';
-    req.reviewedBy = reviewedBy;
-    req.reviewedAt = new Date().toISOString();
-    this.saveAdminRequests();
-
-    // Append to admins.json with default password 'admin@2026'
-    const addResult = this.addAdmin({
-      email: req.email,
-      password: 'admin@2026',
-      name: req.name || req.email.split('@')[0],
-      addedBy: reviewedBy || 'freeuser13012026@gmail.com',
-    });
-
+    await supabase.from('admin_requests').update({ status: 'accepted', reviewed_by: reviewedBy, reviewed_at: new Date().toISOString() }).eq('id', id);
+    const addResult = await this.addAdmin({ email: req.email, password: 'admin@2026', name: req.name || req.email.split('@')[0], addedBy: reviewedBy || 'freeuser13012026@gmail.com' });
     return { success: true, admin: addResult.admin };
   }
 
-  public rejectAdminAccessRequest(id: string, reviewedBy: string): { success: boolean; error?: string } {
-    this.cleanExpiredRequests();
-    const req = this.adminRequests.find((r) => r.id === id);
-    if (!req) {
-      return { success: false, error: 'Admin permission request not found' };
-    }
-
-    req.status = 'rejected';
-    req.reviewedBy = reviewedBy;
-    req.reviewedAt = new Date().toISOString();
-    this.saveAdminRequests();
-
+  public async rejectAdminAccessRequest(id: string, reviewedBy: string): Promise<{ success: boolean; error?: string }> {
+    const req = await this.getAdminAccessRequestById(id);
+    if (!req) return { success: false, error: 'Admin permission request not found' };
+    await supabase.from('admin_requests').update({ status: 'rejected', reviewed_by: reviewedBy, reviewed_at: new Date().toISOString() }).eq('id', id);
     return { success: true };
   }
 }

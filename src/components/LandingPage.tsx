@@ -47,7 +47,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Sign-in form fields
   const [username, setUsername] = useState('PRATIK');
-  const [email, setEmail] = useState('pratikpanda2006@gmail.com');
+  const [email, setEmail] = useState('user@gmail.com');
   const [password, setPassword] = useState('••••••••••••');
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
@@ -59,7 +59,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     setSelectedRole(role);
     if (role === 'student') {
       setUsername('PRATIK');
-      setEmail('pratikpanda2006@gmail.com');
+      setEmail('user@gmail.com');
       setPassword('studentPass2026!');
     } else {
       setUsername('ADMIN_PRATIK');
@@ -366,7 +366,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="pratikpanda2006@gmail.com"
+                      placeholder="user@gmail.com"
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/80 text-white font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                     />
                   </div>
@@ -405,7 +405,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     type="button"
                     onClick={() => {
                       setUsername('PRATIK');
-                      setEmail('pratikpanda2006@gmail.com');
+                      setEmail('user@gmail.com');
                       setPassword('student2026');
                     }}
                     className="text-[11px] text-blue-400 hover:text-blue-300 font-medium underline cursor-pointer"

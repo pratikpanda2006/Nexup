@@ -18,7 +18,8 @@ import {
   Pause,
   Play,
   Eye,
-  EyeOff
+  EyeOff,
+  Heart
 } from 'lucide-react';
 import { NexUpLogo } from './NexUpLogo';
 import { User as UserType } from '../types';
@@ -30,6 +31,7 @@ interface LandingPageProps {
   onSignInAsStudent?: (credentials?: { username?: string; email?: string }) => void;
   onSignInAsAdmin?: (adminUser?: UserType) => void;
   onOpenAuth?: () => void;
+  onOpenContribute?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ 
@@ -37,7 +39,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onGetStarted,
   onSignInAsStudent,
   onSignInAsAdmin,
-  onOpenAuth
+  onOpenAuth,
+  onOpenContribute
 }) => {
   // Navigation step in landing flow: 'welcome' (Image 2) | 'signin' (Image 3) | 'showcase'
   const [step, setStep] = useState<'welcome' | 'signin' | 'showcase'>('welcome');
@@ -45,27 +48,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Selected role for sign-in: 'student' | 'admin'
   const [selectedRole, setSelectedRole] = useState<'student' | 'admin'>('student');
 
-  // Sign-in form fields
-  const [username, setUsername] = useState('PRATIK');
-  const [email, setEmail] = useState('user@gmail.com');
-  const [password, setPassword] = useState('••••••••••••');
+  // Sign-in form fields (starts empty with placeholders per user request)
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
-
-
 
   // When clicking role buttons on Welcome screen:
   const handleSelectRole = (role: 'student' | 'admin') => {
     setSelectedRole(role);
-    if (role === 'student') {
-      setUsername('PRATIK');
-      setEmail('user@gmail.com');
-      setPassword('studentPass2026!');
-    } else {
-      setUsername('ADMIN_PRATIK');
-      setEmail('pratik.admin@nexup.edu');
-      setPassword('adminMasterPass2026!');
-    }
+    // Reset fields so they show placeholders instead of pre-filled values
+    setUsername('');
+    setEmail('');
+    setPassword('');
     setStep('signin');
   };
 
@@ -74,13 +70,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     e.preventDefault();
     if (selectedRole === 'student') {
       if (onSignInAsStudent) {
-        onSignInAsStudent({ username, email });
+        onSignInAsStudent({ 
+          username: username.trim() || 'Student', 
+          email: email.trim() || 'student@nexup.io' 
+        });
       } else {
         onGetStarted();
       }
     } else {
       if (onSignInAsAdmin) {
-        onSignInAsAdmin({ username, email });
+        onSignInAsAdmin({ 
+          username: username.trim() || 'Admin', 
+          email: email.trim() 
+        });
       } else {
         onGetStarted();
       }
@@ -259,8 +261,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
           </div>
 
-          {/* Quick guest explorer link */}
-          <div className="mt-8 pt-4 border-t border-slate-850/80 w-full max-w-xs mx-auto">
+          {/* Quick guest explorer & contribute links */}
+          <div className="mt-8 pt-4 border-t border-slate-850/80 w-full max-w-xs mx-auto flex flex-col items-center space-y-2.5">
             <button
               onClick={() => onExplore()}
               className="inline-flex items-center space-x-1.5 text-xs text-slate-400 hover:text-blue-400 transition-colors cursor-pointer"
@@ -268,6 +270,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span>Browse Live Opportunity Catalog</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
+            {onOpenContribute && (
+              <button
+                type="button"
+                onClick={onOpenContribute}
+                className="inline-flex items-center space-x-1.5 text-xs text-rose-400/90 hover:text-rose-300 transition-colors cursor-pointer"
+              >
+                <Heart className="w-3 h-3 fill-rose-500/20 text-rose-400" />
+                <span>Support &amp; Contribute to NexUP</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -366,7 +378,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="user@gmail.com"
+                      placeholder="e.g. user@gmail.com"
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/80 text-white font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                     />
                   </div>
@@ -386,8 +398,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full pl-10 pr-10 py-2.5 bg-slate-950/80 border border-slate-700/80 text-white font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all font-mono"
+                      placeholder="Enter your password"
+                      className="w-full pl-10 pr-10 py-2.5 bg-slate-950/80 border border-slate-700/80 text-white font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                     />
                     <button
                       type="button"

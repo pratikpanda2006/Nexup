@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   ChevronDown,
   GitPullRequest,
-  Share2
+  Share2,
+  Heart
 } from 'lucide-react';
 import { Opportunity, User } from '../types';
 import { formatDeadline } from '../utils';
@@ -37,6 +38,7 @@ interface DashboardProps {
   onGoBack?: () => void;
   previousTabName?: string;
   onOpenShare?: () => void;
+  onOpenContribute?: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -50,6 +52,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onGoBack,
   previousTabName,
   onOpenShare,
+  onOpenContribute,
 }) => {
   // Category counts
   const hackathons = opportunities.filter((o) => o.category === 'hackathon');
@@ -139,17 +142,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div />
           )}
 
-          {/* Share Platform Button */}
-          <button
-            type="button"
-            onClick={handleShareClick}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 hover:border-blue-500/60 text-xs font-semibold transition-all shadow-xs group cursor-pointer"
-            title="Share NexUP platform (https://nexup.onrender.com)"
-          >
-            <Share2 className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-            <span className="hidden sm:inline font-semibold">Share Platform</span>
-            <span className="sm:hidden font-semibold">Share</span>
-          </button>
+          {/* Right Action Group: Support Us + Share Platform */}
+          <div className="flex items-center gap-2">
+            {onOpenContribute && (
+              <button
+                type="button"
+                onClick={onOpenContribute}
+                className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-950/70 text-rose-300 hover:text-rose-200 border border-rose-800/60 hover:border-rose-700 text-xs font-semibold transition-all shadow-xs group cursor-pointer"
+                title="Support / Contribute to NexUP (UPI QR)"
+              >
+                <Heart className="w-3.5 h-3.5 fill-rose-500/20 text-rose-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline font-semibold">Support Us</span>
+                <span className="sm:hidden font-semibold">Support</span>
+              </button>
+            )}
+
+            {/* Share Platform Button */}
+            <button
+              type="button"
+              onClick={handleShareClick}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 hover:border-blue-500/60 text-xs font-semibold transition-all shadow-xs group cursor-pointer"
+              title="Share NexUP platform (https://nexup.onrender.com)"
+            >
+              <Share2 className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline font-semibold">Share Platform</span>
+              <span className="sm:hidden font-semibold">Share</span>
+            </button>
+          </div>
         </div>
 
         {/* Centered Clean Welcome Greeting */}

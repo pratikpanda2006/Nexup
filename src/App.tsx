@@ -15,8 +15,9 @@ import { AuthModal } from './components/AuthModal';
 import { AdminSignInCard } from './components/AdminSignInCard';
 import { ShareModal } from './components/ShareModal';
 import { FeedbackModal } from './components/FeedbackModal';
+import { ContributeModal } from './components/ContributeModal';
 import { User, Opportunity, NotificationItem, OpportunityCategory } from './types';
-import { Sparkles, CheckCircle2, AlertCircle, ArrowLeft, ShieldAlert, Bell, Share2 } from 'lucide-react';
+import { Sparkles, CheckCircle2, AlertCircle, ArrowLeft, ShieldAlert, Bell, Share2, Heart } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -41,6 +42,7 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isContributeOpen, setIsContributeOpen] = useState(false);
 
   // Toast notification
   const [toast, setToast] = useState<{ message: string; type?: 'success' | 'info' } | null>(null);
@@ -109,7 +111,10 @@ export default function App() {
       isProfileOpen ||
       isOnboardingOpen ||
       isAuthOpen ||
-      isSearchOpen
+      isSearchOpen ||
+      isShareOpen ||
+      isFeedbackOpen ||
+      isContributeOpen
     ) {
       setSelectedOpportunity(null);
       setReminderTarget(null);
@@ -118,6 +123,9 @@ export default function App() {
       setIsOnboardingOpen(false);
       setIsAuthOpen(false);
       setIsSearchOpen(false);
+      setIsShareOpen(false);
+      setIsFeedbackOpen(false);
+      setIsContributeOpen(false);
       window.history.replaceState({ tab: currentTab, modal: null }, '', `#${currentTab}`);
       return;
     }
@@ -520,6 +528,7 @@ export default function App() {
           onOpenAuth={handleOpenAuth}
           onOpenShare={() => setIsShareOpen(true)}
           onOpenFeedback={() => setIsFeedbackOpen(true)}
+          onOpenContribute={() => setIsContributeOpen(true)}
         />
       )}
 
@@ -552,8 +561,15 @@ export default function App() {
 
           <div className="flex items-center space-x-1">
             <button
+              onClick={() => setIsContributeOpen(true)}
+              className="p-2 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-slate-850 transition-colors cursor-pointer"
+              title="Support / Contribute to NexUP"
+            >
+              <Heart className="w-4 h-4 fill-rose-500/20 text-rose-400" />
+            </button>
+            <button
               onClick={handleOpenNotifications}
-              className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-850 transition-colors"
+              className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-850 transition-colors cursor-pointer"
               title="Notifications"
             >
               <Bell className="w-4 h-4" />
@@ -563,7 +579,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setIsShareOpen(true)}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-850 transition-colors"
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-850 transition-colors cursor-pointer"
               title="Share NexUP"
             >
               <Share2 className="w-4 h-4 text-cyan-400" />
@@ -589,6 +605,7 @@ export default function App() {
               navigateToTab('admin');
             }}
             onOpenAuth={handleOpenAuth}
+            onOpenContribute={() => setIsContributeOpen(true)}
           />
         )}
 
@@ -604,6 +621,7 @@ export default function App() {
             onGoBack={navHistory.length > 0 ? handleGoBack : undefined}
             previousTabName={previousTabName}
             onOpenShare={() => setIsShareOpen(true)}
+            onOpenContribute={() => setIsContributeOpen(true)}
           />
         )}
 
@@ -687,6 +705,7 @@ export default function App() {
               onGoBack={handleGoBack}
               previousTabName={previousTabName}
               currentUser={currentUser}
+              onOpenContribute={() => setIsContributeOpen(true)}
             />
           ) : (
             <div className="py-8 flex flex-col items-center justify-center">
@@ -736,6 +755,14 @@ export default function App() {
               className="text-amber-400 hover:text-amber-300 font-medium underline underline-offset-4 transition-colors cursor-pointer"
             >
               Report Bug / Feedback
+            </button>
+            <span className="text-slate-600 hidden sm:inline">·</span>
+            <button
+              onClick={() => setIsContributeOpen(true)}
+              className="text-rose-400 hover:text-rose-300 font-semibold underline underline-offset-4 transition-colors cursor-pointer inline-flex items-center space-x-1"
+            >
+              <Heart className="w-3.5 h-3.5 fill-rose-500/30 text-rose-400" />
+              <span>Contribute / Support Us</span>
             </button>
           </p>
         </div>
@@ -837,6 +864,12 @@ export default function App() {
         onClose={() => setIsFeedbackOpen(false)}
         currentUser={currentUser}
         onSuccess={(msg) => showToast(msg, 'success')}
+      />
+
+      {/* 10. Community Contribution & Support Modal (QR Code) */}
+      <ContributeModal
+        isOpen={isContributeOpen}
+        onClose={() => setIsContributeOpen(false)}
       />
 
       {/* Global Toast Notification */}

@@ -28,12 +28,15 @@ import {
   FileText,
   UploadCloud,
   GitPullRequest,
-  MessageSquare
+  MessageSquare,
+  BarChart3,
+  Heart
 } from 'lucide-react';
 import { Opportunity, OpportunityCategory, User } from '../types';
 import { formatDeadline } from '../utils';
 import { AdminManagementPanel } from './AdminManagementPanel';
 import { AdminFeedbackPanel } from './AdminFeedbackPanel';
+import { AdminAnalyticsPanel } from './AdminAnalyticsPanel';
 import { AIExtractorModal } from './AIExtractorModal';
 
 interface AdminDashboardProps {
@@ -43,6 +46,7 @@ interface AdminDashboardProps {
   onGoBack?: () => void;
   previousTabName?: string;
   currentUser?: User | null;
+  onOpenContribute?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -52,9 +56,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onGoBack,
   previousTabName,
   currentUser,
+  onOpenContribute,
 }) => {
-  // Admin subtabs: Overview, Past Dues, All Opportunities, AI Review Queue, + New Opportunity, Admins (Add other admins), Feedbacks
-  const [activeTab, setActiveTab] = useState<'overview' | 'past_dues' | 'manage' | 'review' | 'create' | 'admins' | 'feedbacks'>('overview');
+  // Admin subtabs: Overview, Past Dues, All Opportunities, AI Review Queue, + New Opportunity, Admins (Add other admins), Feedbacks, Analytics & Users
+  const [activeTab, setActiveTab] = useState<'overview' | 'past_dues' | 'manage' | 'review' | 'create' | 'admins' | 'feedbacks' | 'analytics'>('overview');
   const [stats, setStats] = useState<any>(null);
   const [reviewQueue, setReviewQueue] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
@@ -471,7 +476,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
 
-        {/* 4 Tabs right inside the top banner */}
+        {/* Support Us + Tabs right inside the top banner */}
+        <div className="flex items-center gap-2 shrink-0">
+          {onOpenContribute && (
+            <button
+              onClick={onOpenContribute}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-rose-950/30 border border-rose-800/50 text-rose-300 hover:text-rose-200 hover:bg-rose-950/60 text-xs font-semibold transition-all cursor-pointer shrink-0"
+              title="Support NexUP (UPI QR)"
+            >
+              <Heart className="w-3.5 h-3.5 fill-rose-500/30 text-rose-400" />
+              <span className="hidden sm:inline">Support Us</span>
+            </button>
+          )}
         <div className="flex items-center space-x-1.5 overflow-x-auto text-xs bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 shrink-0">
           <button
             onClick={() => setActiveTab('overview')}
@@ -574,6 +590,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <MessageSquare className="w-3.5 h-3.5" />
             <span>Feedbacks</span>
           </button>
+
+          <button
+            id="tab-analytics"
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
+              activeTab === 'analytics'
+                ? 'bg-rose-950/90 text-rose-200 border border-rose-800/90 font-semibold shadow-xs'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Analytics &amp; Users</span>
+          </button>
+        </div>
         </div>
         </div>
       </div>
@@ -2100,6 +2130,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {activeTab === 'feedbacks' && (
         <AdminFeedbackPanel
           currentUser={currentUser}
+        />
+      )}
+
+      {/* =========================================================================
+          TAB 8: PLATFORM ANALYTICS & STUDENT INTELLIGENCE
+         ========================================================================= */}
+      {activeTab === 'analytics' && (
+        <AdminAnalyticsPanel
+          currentUser={currentUser}
+          onSelectOpportunity={onSelectOpportunity}
         />
       )}
 

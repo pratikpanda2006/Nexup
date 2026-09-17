@@ -76,6 +76,49 @@ export interface User {
     deadlineThresholds: number[]; // e.g. [7, 3, 1]
     frequency: 'once' | 'every_3_days';
   };
+  createdAt?: string;
+  lastActiveAt?: string;
+  bookmarksCount?: number;
+  remindersCount?: number;
+}
+
+export interface PlatformAnalytics {
+  kpis: {
+    totalUsers: number;
+    totalStudents: number;
+    totalAdmins: number;
+    activeThisWeek: number;
+    activeToday: number;
+    totalBookmarks: number;
+    totalReminders: number;
+    engagementRate: number;
+    totalOpportunities: number;
+  };
+  categoryDemand: {
+    category: OpportunityCategory;
+    label: string;
+    count: number;
+    percentage: number;
+  }[];
+  topSkills: {
+    skill: string;
+    count: number;
+    percentage: number;
+  }[];
+  topDomains: {
+    domain: string;
+    count: number;
+    percentage: number;
+  }[];
+  topOpportunities: {
+    id: string;
+    name: string;
+    organization: string;
+    category: OpportunityCategory;
+    deadline: string;
+    bookmarksCount: number;
+  }[];
+  users: User[];
 }
 
 export interface Bookmark {

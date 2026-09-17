@@ -21,6 +21,7 @@ import {
   GitPullRequest,
   Share2,
   MessageSquarePlus,
+  Heart,
   X
 } from 'lucide-react';
 import { User } from '../types';
@@ -40,6 +41,7 @@ interface LeftSidebarProps {
   onOpenAuth: () => void;
   onOpenShare?: () => void;
   onOpenFeedback?: () => void;
+  onOpenContribute?: () => void;
 }
 
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({
@@ -57,6 +59,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   onOpenAuth,
   onOpenShare,
   onOpenFeedback,
+  onOpenContribute,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -306,6 +309,20 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             </span>
           </button>
         )}
+
+        {/* Support / Contribute button */}
+        {onOpenContribute && (
+          <button
+            onClick={onOpenContribute}
+            className="relative group p-2.5 rounded-xl text-rose-400 hover:text-white hover:bg-rose-950/40 transition-colors focus:outline-none cursor-pointer"
+            title="Support / Contribute to NexUP (UPI QR)"
+          >
+            <Heart className="w-5 h-5 fill-rose-500/20 text-rose-400 group-hover:scale-110 transition-transform" />
+            <span className="absolute left-16 px-2 py-1 ml-2 text-xs font-semibold text-white bg-slate-900 border border-slate-700 rounded-md shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+              Support / Contribute ❤️
+            </span>
+          </button>
+        )}
       </div>
 
       {/* =========================================================================
@@ -430,10 +447,29 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                     onOpenFeedback();
                     setIsMenuOpen(false);
                   }}
-                  className="w-full px-4 py-2.5 flex items-center space-x-3 text-amber-300/90 hover:bg-[#2B2D31] hover:text-amber-200 transition-colors text-left"
+                  className="w-full px-4 py-2.5 flex items-center space-x-3 text-amber-300/90 hover:bg-[#2B2D31] hover:text-amber-200 transition-colors text-left cursor-pointer"
                 >
                   <MessageSquarePlus className="w-4 h-4 text-amber-400 shrink-0" />
                   <span>Report Bug / Feedback</span>
+                </button>
+              )}
+
+              {/* Support / Contribute */}
+              {onOpenContribute && (
+                <button
+                  onClick={() => {
+                    onOpenContribute();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-2.5 flex items-center justify-between text-rose-300 hover:bg-[#2B2D31] hover:text-rose-200 transition-colors text-left cursor-pointer"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Heart className="w-4 h-4 fill-rose-500/20 text-rose-400 shrink-0" />
+                    <span>Support NexUP (UPI QR)</span>
+                  </div>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-950 text-rose-300 border border-rose-800 font-bold">
+                    ❤️
+                  </span>
                 </button>
               )}
 
@@ -701,13 +737,32 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   onOpenShare();
                   setIsMobileMenuOpen(false);
                 }}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-200 text-xs font-medium transition-all"
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-200 text-xs font-medium transition-all cursor-pointer"
               >
                 <div className="flex items-center space-x-2.5">
                   <Share2 className="w-4 h-4 text-cyan-400" />
                   <span>Share NexUP</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-500" />
+              </button>
+            )}
+
+            {/* Support / Contribute */}
+            {onOpenContribute && (
+              <button
+                onClick={() => {
+                  onOpenContribute();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-rose-950/40 via-pink-950/20 to-slate-900 border border-rose-900/50 hover:border-rose-700 text-rose-300 text-xs font-semibold transition-all cursor-pointer"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <Heart className="w-4 h-4 fill-rose-500/30 text-rose-400" />
+                  <span>Support / Contribute (UPI QR)</span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-800 font-bold">
+                  Fuel NexUP ❤️
+                </span>
               </button>
             )}
 

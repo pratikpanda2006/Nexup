@@ -19,6 +19,9 @@ app.use(async (req, res, next) => {
   const userId = req.headers['x-user-id'] as string;
   if (userId) {
     req.user = await db.getUserById(userId);
+    if (req.user?.id) {
+      db.recordUserActivity(req.user.id);
+    }
   }
   next();
 });
@@ -59,6 +62,10 @@ app.post('/api/auth/login', async (req, res) => {
     user = result.user;
   }
 
+  if (user?.id) {
+    db.recordUserActivity(user.id);
+  }
+
   res.json({ user, message: 'Logged in successfully' });
 });
 
@@ -81,6 +88,10 @@ app.post('/api/auth/signup', async (req, res) => {
     email: normalizedEmail,
     requestedRole,
   });
+
+  if (user?.id) {
+    db.recordUserActivity(user.id);
+  }
 
   res.json({
     user,
@@ -793,6 +804,17 @@ app.delete('/api/feedback/:id', async (req, res) => {
     res.json({ success });
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to delete feedback' });
+  }
+});
+
+// --- ADMIN PLATFORM ANALYTICS & USER INTELLIGENCE ---
+app.get('/api/admin/analytics', async (req, res) => {
+  try {
+    const analytics = await db.getPlatformAnalytics();
+    res.json(analytics);
+  } catch (err: any) {
+    console.error('Failed to get platform analytics:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch platform analytics' });
   }
 });
 

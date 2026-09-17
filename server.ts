@@ -818,16 +818,6 @@ app.delete('/api/feedback/:id', async (req, res) => {
   }
 });
 
-// --- ADMIN PLATFORM ANALYTICS & USER INTELLIGENCE ---
-app.get('/api/admin/analytics', async (req, res) => {
-  try {
-    const analytics = await db.getPlatformAnalytics();
-    res.json(analytics);
-  } catch (err: any) {
-    console.error('Failed to get platform analytics:', err);
-    res.status(500).json({ error: err.message || 'Failed to fetch platform analytics' });
-  }
-});
 
 // --- VITE DEV / PRODUCTION STATIC SERVING ---
 async function startServer() {

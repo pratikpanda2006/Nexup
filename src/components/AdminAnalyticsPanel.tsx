@@ -32,35 +32,24 @@ interface AdminAnalyticsPanelProps {
 
 const DEFAULT_ANALYTICS: PlatformAnalytics = {
   kpis: {
-    totalUsers: 24,
-    totalStudents: 22,
-    totalAdmins: 2,
-    activeThisWeek: 18,
-    activeToday: 9,
-    totalBookmarks: 47,
-    totalReminders: 15,
-    engagementRate: 88,
-    totalOpportunities: 35,
+    totalUsers: 0,
+    totalStudents: 0,
+    totalAdmins: 0,
+    activeThisWeek: 0,
+    activeToday: 0,
+    totalBookmarks: 0,
+    totalReminders: 0,
+    engagementRate: 0,
+    totalOpportunities: 0,
   },
   categoryDemand: [
-    { category: 'hackathon', label: 'Hackathons & Sprints', count: 32, percentage: 38 },
-    { category: 'internship', label: 'Engineering Internships', count: 28, percentage: 33 },
-    { category: 'research', label: 'Research Fellowships', count: 14, percentage: 17 },
-    { category: 'opensource', label: 'Open Source Bounties', count: 10, percentage: 12 },
+    { category: 'hackathon', label: 'Hackathons & Sprints', count: 0, percentage: 0 },
+    { category: 'internship', label: 'Engineering Internships', count: 0, percentage: 0 },
+    { category: 'research', label: 'Research Fellowships', count: 0, percentage: 0 },
+    { category: 'opensource', label: 'Open Source Bounties', count: 0, percentage: 0 },
   ],
-  topSkills: [
-    { skill: 'Python', count: 18, percentage: 75 },
-    { skill: 'PyTorch', count: 14, percentage: 58 },
-    { skill: 'TypeScript', count: 12, percentage: 50 },
-    { skill: 'Next.js', count: 10, percentage: 42 },
-    { skill: 'C++', count: 8, percentage: 33 },
-    { skill: 'Rust', count: 6, percentage: 25 },
-  ],
-  topDomains: [
-    { domain: 'AI/ML', count: 20, percentage: 83 },
-    { domain: 'Web Development', count: 14, percentage: 58 },
-    { domain: 'Robotics', count: 8, percentage: 33 },
-  ],
+  topSkills: [],
+  topDomains: [],
   topOpportunities: [],
   users: [],
 };
@@ -305,11 +294,10 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {loading && !data ? '...' : fmtNum(kpis?.totalUsers, 24)}
+              {loading && !data ? '...' : fmtNum(kpis?.totalUsers, 0)}
             </div>
-            <div className="flex items-center text-[10px] text-emerald-400 font-semibold mt-1">
-              <TrendingUp className="w-3 h-3 mr-0.5" />
-              <span>+18.4% MoM Growth</span>
+            <div className="text-[10px] text-slate-400 mt-1">
+              {kpis?.totalStudents || 0} students · {kpis?.totalAdmins || 0} admins
             </div>
           </div>
         </div>
@@ -324,7 +312,7 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black text-emerald-400">
-              {loading && !data ? '...' : fmtNum(kpis?.activeToday, 9)}
+              {loading && !data ? '...' : fmtNum(kpis?.activeToday, 0)}
             </div>
             <div className="text-[10px] text-slate-400 mt-1">
               Active within last 24 hours
@@ -342,10 +330,10 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black text-indigo-300">
-              {loading && !data ? '...' : fmtNum(kpis?.activeThisWeek, 18)}
+              {loading && !data ? '...' : fmtNum(kpis?.activeThisWeek, 0)}
             </div>
             <div className="text-[10px] text-indigo-400/90 font-medium mt-1">
-              {((kpis as any)?.retentionRate ?? (kpis as any)?.engagementRate ?? 88)}% user retention
+              {kpis?.engagementRate ? `${kpis.engagementRate}% active rate` : 'Active in last 7 days'}
             </div>
           </div>
         </div>
@@ -360,7 +348,7 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black text-amber-400">
-              {loading && !data ? '...' : fmtNum(kpis?.totalBookmarks, 47)}
+              {loading && !data ? '...' : fmtNum(kpis?.totalBookmarks, 0)}
             </div>
             <div className="text-[10px] text-slate-400 mt-1">
               Total bookmarked opportunities
@@ -378,7 +366,7 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black text-rose-300">
-              {loading && !data ? '...' : fmtNum((kpis as any)?.totalReminders ?? (kpis as any)?.activeReminders, 15)}
+              {loading && !data ? '...' : fmtNum((kpis as any)?.totalReminders ?? (kpis as any)?.activeReminders, 0)}
             </div>
             <div className="text-[10px] text-slate-400 mt-1">
               Automated deadline alerts
@@ -396,10 +384,10 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black text-purple-300">
-              {loading && !data ? '...' : fmtNum(kpis?.totalOpportunities, 35)}
+              {loading && !data ? '...' : fmtNum(kpis?.totalOpportunities, 0)}
             </div>
             <div className="text-[10px] text-purple-400/90 font-medium mt-1">
-              Across 4 top career tiers
+              Live curated listings
             </div>
           </div>
         </div>
@@ -422,44 +410,65 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-              Distribution of student applications and interest across opportunity types.
+              Distribution of student bookmarks across opportunity types.
             </p>
 
             <div className="mt-5 space-y-3.5">
-              {(data?.categoryDemand || []).map((cat) => {
-                const colors = {
-                  hackathon: { bar: 'bg-rose-500', text: 'text-rose-400', border: 'border-rose-800/40' },
-                  internship: { bar: 'bg-indigo-500', text: 'text-indigo-400', border: 'border-indigo-800/40' },
-                  research: { bar: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-800/40' },
-                  open_source: { bar: 'bg-amber-500', text: 'text-amber-400', border: 'border-amber-800/40' },
-                }[cat.category] || { bar: 'bg-cyan-500', text: 'text-cyan-400', border: 'border-cyan-800/40' };
+              {(!data?.categoryDemand || data.categoryDemand.every(cat => cat.count === 0)) ? (
+                <div className="py-8 text-center text-slate-500 text-xs">
+                  <Bookmark className="w-6 h-6 mx-auto text-slate-600 mb-2 opacity-60" />
+                  <span>No student saves recorded yet. Metrics will update dynamically as opportunities are bookmarked.</span>
+                </div>
+              ) : (
+                data.categoryDemand.map((cat) => {
+                  const colors = {
+                    hackathon: { bar: 'bg-rose-500', text: 'text-rose-400', border: 'border-rose-800/40' },
+                    internship: { bar: 'bg-indigo-500', text: 'text-indigo-400', border: 'border-indigo-800/40' },
+                    research: { bar: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-800/40' },
+                    opensource: { bar: 'bg-amber-500', text: 'text-amber-400', border: 'border-amber-800/40' },
+                  }[cat.category] || { bar: 'bg-cyan-500', text: 'text-cyan-400', border: 'border-cyan-800/40' };
 
-                return (
-                  <div key={cat.category} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-200 capitalize">
-                        {cat.category.replace('_', ' ')}s
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-slate-400 text-[11px]">{cat.count} saves</span>
-                        <span className={`font-bold ${colors.text}`}>{cat.percentage}%</span>
+                  return (
+                    <div key={cat.category} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-200 capitalize">
+                          {cat.category.replace('_', ' ')}s
+                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-slate-400 text-[11px]">{cat.count} saves</span>
+                          <span className={`font-bold ${colors.text}`}>{cat.percentage}%</span>
+                        </div>
+                      </div>
+                      <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                        <div
+                          className={`h-full ${colors.bar} rounded-full transition-all duration-500`}
+                          style={{ width: `${cat.percentage}%` }}
+                        />
                       </div>
                     </div>
-                    <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                      <div
-                        className={`h-full ${colors.bar} rounded-full transition-all duration-500`}
-                        style={{ width: `${cat.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
 
           <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Primary Driver: <strong className="text-white">Hackathons &amp; Internships (82%)</strong></span>
-            <span className="text-emerald-400 font-semibold">Fastest growing: AI Labs</span>
+            {data?.categoryDemand && data.categoryDemand.some(c => c.count > 0) ? (
+              (() => {
+                const topCat = [...data.categoryDemand].sort((a, b) => b.count - a.count)[0];
+                return (
+                  <>
+                    <span>Top Category: <strong className="text-white capitalize">{topCat.category.replace('_', ' ')}</strong></span>
+                    <span className="text-emerald-400 font-semibold">{topCat.count} saves ({topCat.percentage}%)</span>
+                  </>
+                );
+              })()
+            ) : (
+              <>
+                <span>Status: <strong className="text-white">Awaiting bookmarks</strong></span>
+                <span className="text-slate-500 font-medium">Real-time sync</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -480,31 +489,47 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
             </p>
 
             <div className="mt-4 space-y-2.5">
-              {(data?.topSkills || []).slice(0, 6).map((item, idx) => (
-                <div key={item.skill} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-[10px] font-mono text-slate-500 w-3">#{idx + 1}</span>
-                    <span className="font-semibold text-slate-200">{item.skill}</span>
-                  </div>
-                  <div className="flex items-center space-x-2.5">
-                    <div className="w-24 sm:w-28 h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                      <div
-                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
-                        style={{ width: `${Math.min(100, item.percentage * 1.8)}%` }}
-                      />
-                    </div>
-                    <span className="text-[11px] font-mono font-bold text-emerald-300 w-10 text-right">
-                      {item.count}
-                    </span>
-                  </div>
+              {(!data?.topSkills || data.topSkills.length === 0) ? (
+                <div className="py-8 text-center text-slate-500 text-xs">
+                  <Code2 className="w-6 h-6 mx-auto text-slate-600 mb-2 opacity-60" />
+                  <span>No student skills recorded yet. Profiles will populate this distribution.</span>
                 </div>
-              ))}
+              ) : (
+                data.topSkills.slice(0, 6).map((item, idx) => (
+                  <div key={item.skill} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] font-mono text-slate-500 w-3">#{idx + 1}</span>
+                      <span className="font-semibold text-slate-200">{item.skill}</span>
+                    </div>
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-24 sm:w-28 h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                        <div
+                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+                          style={{ width: `${Math.min(100, item.percentage * 1.8)}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-mono font-bold text-emerald-300 w-10 text-right">
+                        {item.count}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Core Strength: <strong className="text-white">Python, AI/ML &amp; TypeScript</strong></span>
-            <span className="text-cyan-400 font-semibold">Ready for hackathons</span>
+            {data?.topSkills && data.topSkills.length > 0 ? (
+              <>
+                <span>Top Skill: <strong className="text-white">{data.topSkills[0]?.skill}</strong></span>
+                <span className="text-cyan-400 font-semibold">{data.topSkills[0]?.count} student{data.topSkills[0]?.count > 1 ? 's' : ''}</span>
+              </>
+            ) : (
+              <>
+                <span>Skills: <strong className="text-white">Profile driven</strong></span>
+                <span className="text-slate-500 font-medium">Auto-aggregated</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -521,40 +546,56 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-              Programs driving the highest student intent, team formations, and click-throughs.
+              Programs driving student intent, team formations, and saved deadlines.
             </p>
 
             <div className="mt-4 space-y-2.5">
-              {(data?.topOpportunities || []).slice(0, 5).map((op, idx) => (
-                <div
-                  key={op.id}
-                  onClick={() => onSelectOpportunity && onSelectOpportunity(op as any)}
-                  className="group p-2 rounded-xl bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-amber-500/50 transition-all cursor-pointer flex items-center justify-between"
-                >
-                  <div className="flex items-center space-x-2 min-w-0 pr-2">
-                    <span className="text-xs font-black text-amber-400/90 font-mono w-4">
-                      {idx + 1}
-                    </span>
-                    <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-slate-200 group-hover:text-white truncate">
-                        {op.name}
-                      </h4>
-                      <div className="flex items-center space-x-2 text-[10px] text-slate-500 mt-0.5">
-                        <span className="capitalize text-slate-400">{op.category.replace('_', ' ')}</span>
-                        <span>•</span>
-                        <span className="text-amber-400 font-mono">{(op as any).bookmarksCount ?? (op as any).bookmarks ?? 0} saves</span>
+              {(!data?.topOpportunities || data.topOpportunities.length === 0) ? (
+                <div className="py-8 text-center text-slate-500 text-xs">
+                  <Award className="w-6 h-6 mx-auto text-slate-600 mb-2 opacity-60" />
+                  <span>No opportunities saved yet. Leaderboard activates upon first student bookmark.</span>
+                </div>
+              ) : (
+                data.topOpportunities.slice(0, 5).map((op, idx) => (
+                  <div
+                    key={op.id}
+                    onClick={() => onSelectOpportunity && onSelectOpportunity(op as any)}
+                    className="group p-2 rounded-xl bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-amber-500/50 transition-all cursor-pointer flex items-center justify-between"
+                  >
+                    <div className="flex items-center space-x-2 min-w-0 pr-2">
+                      <span className="text-xs font-black text-amber-400/90 font-mono w-4">
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-slate-200 group-hover:text-white truncate">
+                          {op.name}
+                        </h4>
+                        <div className="flex items-center space-x-2 text-[10px] text-slate-500 mt-0.5">
+                          <span className="capitalize text-slate-400">{op.category.replace('_', ' ')}</span>
+                          <span>•</span>
+                          <span className="text-amber-400 font-mono">{(op as any).bookmarksCount ?? (op as any).bookmarks ?? 0} saves</span>
+                        </div>
                       </div>
                     </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 shrink-0 transition-colors" />
                   </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 shrink-0 transition-colors" />
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Leader: <strong className="text-white">Amazon ML Challenge</strong></span>
-            <span className="text-amber-400 font-semibold">140+ saves</span>
+            {data?.topOpportunities && data.topOpportunities.length > 0 ? (
+              <>
+                <span>Leader: <strong className="text-white">{data.topOpportunities[0]?.name}</strong></span>
+                <span className="text-amber-400 font-semibold">{(data.topOpportunities[0] as any).bookmarksCount ?? 0} saves</span>
+              </>
+            ) : (
+              <>
+                <span>Leader: <strong className="text-white">None yet</strong></span>
+                <span className="text-slate-500 font-medium">0 saves recorded</span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -641,7 +682,7 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search students by name, email, university (e.g. Stanford, IIT), or skills (Python, PyTorch)..."
+            placeholder="Search users by name, email, university, or skills..."
             className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/70 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none transition-colors"
           />
         </div>
@@ -686,7 +727,7 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-400">
                     <Users className="w-6 h-6 mx-auto text-slate-600 mb-2" />
-                    <span>No users match the search filter.</span>
+                    <span>{(!data?.users || data.users.length === 0) ? 'No users registered yet. New signups will appear here automatically.' : 'No users match the active search filter.'}</span>
                   </td>
                 </tr>
               ) : (
@@ -844,7 +885,7 @@ export const AdminAnalyticsPanel: React.FC<AdminAnalyticsPanelProps> = ({
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="py-10 text-center text-slate-400 text-xs">
-              No users found matching your criteria.
+              {(!data?.users || data.users.length === 0) ? 'No users registered yet. New signups will appear here automatically.' : 'No users found matching your criteria.'}
             </div>
           ) : (
             filteredUsers.map((u) => {

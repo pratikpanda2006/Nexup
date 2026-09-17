@@ -479,7 +479,8 @@ export const AdminManagementPanel: React.FC<AdminManagementPanelProps> = ({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table: md+ screens */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 uppercase font-mono text-[10px]">
               <tr>
@@ -600,6 +601,94 @@ export const AdminManagementPanel: React.FC<AdminManagementPanelProps> = ({
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Admin Roster Cards (< md breakpoint: zero horizontal scrolling) */}
+        <div className="block md:hidden divide-y divide-slate-800/80">
+          {admins.map((adm) => {
+            const isPrimary = adm.isPrimary;
+            const isRevealed = revealedPasswords[adm.email];
+
+            return (
+              <div key={adm.email} className="p-4 space-y-3 hover:bg-slate-850/50 transition-colors">
+                {/* Header row: Avatar + Name/Email + Role */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center space-x-2.5">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                      isPrimary 
+                        ? 'bg-rose-950 text-rose-300 border border-rose-700' 
+                        : 'bg-slate-800 text-slate-200 border border-slate-700'
+                    }`}>
+                      {adm.name ? adm.name.slice(0, 2).toUpperCase() : adm.email.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <span className="font-bold text-white block text-xs">
+                        {adm.name || adm.email.split('@')[0]}
+                      </span>
+                      <span className="text-slate-400 font-mono text-[11px] break-all">
+                        {adm.email}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isPrimary ? (
+                    <span className="inline-flex items-center space-x-1 bg-rose-950/80 text-rose-300 border border-rose-800/80 px-2 py-0.5 rounded-full font-bold text-[10px] uppercase font-mono shrink-0">
+                      <ShieldCheck className="w-3 h-3 text-rose-400" />
+                      <span>Primary</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center space-x-1 bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full font-semibold text-[10px] shrink-0">
+                      <span>Admin</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Password display */}
+                <div className="flex items-center justify-between bg-slate-950/80 px-3 py-2 rounded-xl border border-slate-800 text-xs">
+                  <span className="text-slate-400 text-[11px]">Password:</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-mono text-xs text-white">
+                      {isRevealed ? adm.password : '••••••••'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleReveal(adm.email)}
+                      className="text-slate-400 hover:text-slate-200"
+                    >
+                      {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Actions row */}
+                <div className="flex items-center justify-end space-x-2 pt-1">
+                  <button
+                    onClick={() => {
+                      setEditingPasswordEmail(adm.email);
+                      setNewPasswordValue(adm.password);
+                    }}
+                    className="flex-1 py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 border border-slate-700"
+                  >
+                    <Key className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Change Password</span>
+                  </button>
+
+                  {!isPrimary && (
+                    <button
+                      onClick={() => {
+                        setDeletingAdminEmail(adm.email);
+                        setConfirmDelete(false);
+                      }}
+                      className="py-1.5 px-3 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 text-xs font-semibold inline-flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Revoke</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

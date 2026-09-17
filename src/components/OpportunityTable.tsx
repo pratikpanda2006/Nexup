@@ -29,7 +29,10 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({
 }) => {
   return (
     <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* =========================================================================
+          DESKTOP DATA TABLE (Visible on md+ screens: laptops / desktops)
+         ========================================================================= */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-mono uppercase tracking-wider text-[10px]">
@@ -73,12 +76,17 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({
 
               const categoryBadgeClass =
                 op.category === 'hackathon'
-                  ? 'bg-amber-950/40 text-amber-300 border-amber-800/50'
+                  ? 'bg-amber-950/50 text-amber-300 border-amber-800/60'
                   : op.category === 'internship'
-                  ? 'bg-indigo-950/40 text-indigo-300 border-indigo-800/50'
-                  : 'bg-violet-950/40 text-violet-300 border-violet-800/50';
+                  ? 'bg-blue-950/50 text-cyan-300 border-blue-800/60'
+                  : op.category === 'opensource'
+                  ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60'
+                  : 'bg-purple-950/50 text-purple-300 border-purple-800/60';
 
-              const categoryLabel = op.category.charAt(0).toUpperCase() + op.category.slice(1);
+              const categoryLabel =
+                op.category === 'opensource'
+                  ? 'Open Source'
+                  : op.category.charAt(0).toUpperCase() + op.category.slice(1);
 
               return (
                 <tr
@@ -163,7 +171,7 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({
                       {/* View Details button */}
                       <button
                         onClick={() => onViewDetails(op)}
-                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-medium text-xs transition-colors border border-slate-700/60 ml-1"
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-medium text-xs transition-colors border border-slate-700/60 ml-1 cursor-pointer"
                       >
                         View More
                       </button>
@@ -174,6 +182,131 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* =========================================================================
+          MOBILE CARD LIST (Visible on < md screens: phones & small tablets)
+          Zero horizontal scrolling! Touch-friendly, comfortable reading experience
+         ========================================================================= */}
+      <div className="block md:hidden divide-y divide-slate-800/80">
+        {opportunities.map((op) => {
+          const isBookmarked = bookmarkedIds.has(op.id);
+
+          const categoryBadgeClass =
+            op.category === 'hackathon'
+              ? 'bg-amber-950/50 text-amber-300 border-amber-800/60'
+              : op.category === 'internship'
+              ? 'bg-blue-950/50 text-cyan-300 border-blue-800/60'
+              : op.category === 'opensource'
+              ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60'
+              : 'bg-purple-950/50 text-purple-300 border-purple-800/60';
+
+          const categoryLabel =
+            op.category === 'opensource'
+              ? 'Open Source'
+              : op.category.charAt(0).toUpperCase() + op.category.slice(1);
+
+          return (
+            <div
+              key={op.id}
+              onClick={() => onViewDetails(op)}
+              className="p-4 space-y-3 hover:bg-slate-850/50 transition-colors cursor-pointer"
+            >
+              {/* Top Row: Category + Status */}
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded border ${categoryBadgeClass}`}>
+                  {categoryLabel}
+                </span>
+
+                {op.status === 'closing_soon' ? (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-amber-950/50 text-amber-300 border border-amber-800/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    <span>Closing soon</span>
+                  </span>
+                ) : op.status === 'closed' ? (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-slate-950 text-slate-500 border border-slate-800">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+                    <span>Closed</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-emerald-950/40 text-emerald-300 border border-emerald-800/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span>Active</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Middle Row: Title & Organization */}
+              <div>
+                <h4 className="text-sm font-bold text-white line-clamp-2 leading-snug">
+                  {op.name}
+                </h4>
+                <p className="text-xs text-slate-400 font-medium mt-1">
+                  {op.organization}
+                </p>
+              </div>
+
+              {/* Meta row: Deadline & Location */}
+              <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60 font-mono">
+                <span>
+                  Deadline: <strong className="text-slate-200">{formatDeadline(op.deadline)}</strong>
+                </span>
+                <span className="capitalize text-slate-400">
+                  {op.mode} • {op.geography}
+                </span>
+              </div>
+
+              {/* Action Buttons Row */}
+              <div
+                className="flex items-center justify-between pt-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center space-x-1">
+                  {/* Bookmark Button */}
+                  <button
+                    onClick={() => onToggleBookmark(op.id)}
+                    className={`p-2 rounded-xl border transition-colors ${
+                      isBookmarked
+                        ? 'text-blue-400 bg-blue-950/60 border-blue-800/60'
+                        : 'text-slate-400 hover:text-white bg-slate-800/70 border-slate-700/60'
+                    }`}
+                    title={isBookmarked ? 'Saved' : 'Save'}
+                  >
+                    <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+                  </button>
+
+                  {/* Reminder Button */}
+                  <button
+                    onClick={() => onOpenReminder(op)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-800/70 border border-slate-700/60 transition-colors"
+                    title="Set reminder"
+                  >
+                    <Bell className="w-4 h-4" />
+                  </button>
+
+                  {/* Official URL */}
+                  <a
+                    href={op.officialUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-800/70 border border-slate-700/60 transition-colors"
+                    title="Official site"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+
+                <button
+                  onClick={() => onViewDetails(op)}
+                  className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-colors"
+                >
+                  <span>View Details</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

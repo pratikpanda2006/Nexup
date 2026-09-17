@@ -17,7 +17,11 @@ import {
   Compass,
   ArrowUpRight,
   ExternalLink,
-  Plus
+  Plus,
+  GitPullRequest,
+  Share2,
+  MessageSquarePlus,
+  X
 } from 'lucide-react';
 import { User } from '../types';
 
@@ -34,6 +38,8 @@ interface LeftSidebarProps {
   onOpenManageAlerts: () => void;
   onLogout: () => void;
   onOpenAuth: () => void;
+  onOpenShare?: () => void;
+  onOpenFeedback?: () => void;
 }
 
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({
@@ -49,8 +55,11 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   onOpenManageAlerts,
   onLogout,
   onOpenAuth,
+  onOpenShare,
+  onOpenFeedback,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu on click outside
@@ -82,7 +91,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const isAdmin = currentUser?.role === 'admin';
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-16 md:w-[68px] bg-[#020612] border-r border-slate-800/80 z-40 flex flex-col justify-between items-center py-4 select-none">
+    <>
+      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-[68px] bg-[#020612] border-r border-slate-800/80 z-40 flex-col justify-between items-center py-4 select-none">
       {/* TOP SECTION: APP LOGO + PRIMARY CONTROLS matching Image 3 */}
       <div className="flex flex-col items-center space-y-5 w-full">
         {/* 1. APP LOGO: Clicking it brings user to dashboard (User prompt: "here it should be our logo") */}
@@ -237,10 +247,26 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           </span>
         </button>
 
+        {/* Open Source shortcut */}
+        <button
+          onClick={() => onTabChange('opensource')}
+          className={`relative group p-2.5 rounded-xl transition-colors focus:outline-none cursor-pointer ${
+            currentTab === 'opensource'
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+              : 'text-slate-400 hover:text-white hover:bg-slate-850'
+          }`}
+          title="Open Source Programs"
+        >
+          <GitPullRequest className="w-5 h-5 text-slate-300 group-hover:text-emerald-400 transition-colors" />
+          <span className="absolute left-16 px-2 py-1 ml-2 text-xs font-semibold text-white bg-slate-900 border border-slate-700 rounded-md shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+            Open Source Programs
+          </span>
+        </button>
+
         {/* Admin shortcut */}
         <button
           onClick={() => onTabChange('admin')}
-          className={`relative group p-2.5 rounded-xl transition-colors focus:outline-none ${
+          className={`relative group p-2.5 rounded-xl transition-colors focus:outline-none cursor-pointer ${
             currentTab === 'admin'
               ? 'bg-rose-600/20 text-rose-400 border border-rose-500/40'
               : 'text-slate-400 hover:text-rose-400 hover:bg-rose-950/30'
@@ -252,6 +278,34 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             {isAdmin ? "Admin Operations Console" : "Admin Mode (Sign In / Request Access)"}
           </span>
         </button>
+
+        {/* Share Platform Button ("onside") */}
+        {onOpenShare && (
+          <button
+            onClick={onOpenShare}
+            className="relative group p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-850 transition-colors focus:outline-none cursor-pointer"
+            title="Share NexUP (https://nexup.onrender.com)"
+          >
+            <Share2 className="w-5 h-5 text-slate-300 group-hover:text-cyan-400 transition-colors" />
+            <span className="absolute left-16 px-2 py-1 ml-2 text-xs font-semibold text-white bg-slate-900 border border-slate-700 rounded-md shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+              Share NexUP
+            </span>
+          </button>
+        )}
+
+        {/* Bug / Feedback button */}
+        {onOpenFeedback && (
+          <button
+            onClick={onOpenFeedback}
+            className="relative group p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-850 transition-colors focus:outline-none cursor-pointer"
+            title="Report Bug / Give Feedback"
+          >
+            <MessageSquarePlus className="w-5 h-5 text-slate-300 group-hover:text-amber-400 transition-colors" />
+            <span className="absolute left-16 px-2 py-1 ml-2 text-xs font-semibold text-white bg-slate-900 border border-slate-700 rounded-md shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+              Report Bug / Feedback
+            </span>
+          </button>
+        )}
       </div>
 
       {/* =========================================================================
@@ -369,6 +423,20 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
               {/* Divider */}
               <div className="my-1.5 border-t border-[#2B2D31]" />
 
+              {/* Report Bug / Feedback */}
+              {onOpenFeedback && (
+                <button
+                  onClick={() => {
+                    onOpenFeedback();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-2.5 flex items-center space-x-3 text-amber-300/90 hover:bg-[#2B2D31] hover:text-amber-200 transition-colors text-left"
+                >
+                  <MessageSquarePlus className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Report Bug / Feedback</span>
+                </button>
+              )}
+
               {/* 5. Help (Community reference matching Image 4 & footer) */}
               <a
                 href="https://chat.whatsapp.com/IythdNIQIgI4dUQ9GhGw7J"
@@ -400,5 +468,309 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         )}
       </div>
     </aside>
+
+    {/* =========================================================================
+        MOBILE BOTTOM NAVIGATION BAR (< md breakpoint: phones / small tablets)
+        Gives 100% full-width viewport on mobile without horizontal cramping
+       ========================================================================= */}
+    <nav className="flex md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#020612]/95 backdrop-blur-xl border-t border-slate-800/90 items-center justify-around px-2 py-1.5 safe-area-bottom select-none shadow-[0_-10px_25px_rgba(0,0,0,0.5)]">
+      {/* 1. Explore / Dashboard */}
+      <button
+        onClick={() => {
+          onTabChange('dashboard');
+          setIsMobileMenuOpen(false);
+        }}
+        className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+          currentTab === 'dashboard'
+            ? 'text-blue-400 font-bold'
+            : 'text-slate-400 hover:text-slate-200'
+        }`}
+      >
+        <Compass className={`w-5 h-5 ${currentTab === 'dashboard' ? 'text-blue-400 scale-105' : 'text-slate-400'}`} />
+        <span className="text-[10px] mt-0.5 tracking-tight">Explore</span>
+      </button>
+
+      {/* 2. Search */}
+      <button
+        onClick={() => {
+          onOpenSearch();
+          setIsMobileMenuOpen(false);
+        }}
+        className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
+      >
+        <Search className="w-5 h-5 text-slate-400" />
+        <span className="text-[10px] mt-0.5 tracking-tight">Search</span>
+      </button>
+
+      {/* 3. Saved Opportunities */}
+      <button
+        onClick={() => {
+          onTabChange('saved');
+          setIsMobileMenuOpen(false);
+        }}
+        className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+          currentTab === 'saved'
+            ? 'text-indigo-400 font-bold'
+            : 'text-slate-400 hover:text-slate-200'
+        }`}
+      >
+        <div className="relative">
+          <Bookmark className={`w-5 h-5 ${currentTab === 'saved' ? 'text-indigo-400 fill-indigo-400/20' : 'text-slate-400'}`} />
+          {savedCount > 0 && (
+            <span className="absolute -top-1 -right-2 w-4 h-4 bg-blue-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              {savedCount > 9 ? '9+' : savedCount}
+            </span>
+          )}
+        </div>
+        <span className="text-[10px] mt-0.5 tracking-tight">Saved</span>
+      </button>
+
+      {/* 4. Bug / Feedback */}
+      {onOpenFeedback && (
+        <button
+          onClick={() => {
+            onOpenFeedback();
+            setIsMobileMenuOpen(false);
+          }}
+          className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-amber-400 hover:text-amber-300 transition-all cursor-pointer"
+        >
+          <MessageSquarePlus className="w-5 h-5 text-amber-400" />
+          <span className="text-[10px] mt-0.5 tracking-tight">Feedback</span>
+        </button>
+      )}
+
+      {/* 5. User Avatar / Menu Drawer Trigger */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+          isMobileMenuOpen
+            ? 'text-white'
+            : 'text-slate-400 hover:text-slate-200'
+        }`}
+      >
+        <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] border transition-all ${
+          isMobileMenuOpen
+            ? 'border-blue-400 bg-blue-600 text-white'
+            : 'border-slate-700 bg-slate-800 text-slate-200'
+        }`}>
+          {initials}
+        </div>
+        <span className="text-[10px] mt-0.5 tracking-tight">Menu</span>
+      </button>
+    </nav>
+
+    {/* =========================================================================
+        MOBILE DRAWER / BOTTOM SHEET (< md breakpoint)
+        Displays complete category navigation, Admin mode, and user controls
+       ========================================================================= */}
+    {isMobileMenuOpen && (
+      <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/75 backdrop-blur-xs animate-in fade-in duration-200 select-none">
+        {/* Backdrop click to dismiss */}
+        <div
+          className="flex-1 w-full"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+
+        {/* Drawer content card */}
+        <div className="bg-[#121620] border-t border-slate-800 rounded-t-3xl max-h-[85vh] overflow-y-auto p-4 space-y-4 shadow-2xl animate-in slide-in-from-bottom duration-250 pb-20">
+          {/* Grab handle bar */}
+          <div className="w-10 h-1 rounded-full bg-slate-700 mx-auto" />
+
+          {/* Header: User Profile Summary & Close */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+            <div
+              onClick={() => {
+                onOpenProfile();
+                setIsMobileMenuOpen(false);
+              }}
+              className="flex items-center space-x-3 cursor-pointer"
+            >
+              <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-md">
+                {initials}
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">
+                  {currentUser?.name || 'Student Account'}
+                </h4>
+                <p className="text-[11px] text-slate-400 capitalize">
+                  {isAdmin ? 'Administrator' : 'Student • Explorer'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Category Quick Navigation */}
+          <div>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold block mb-2 px-1">
+              OPPORTUNITY DIRECTORIES
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  onTabChange('hackathons');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`flex items-center space-x-2.5 p-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
+                  currentTab === 'hackathons'
+                    ? 'bg-amber-950/60 text-amber-200 border-amber-800'
+                    : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:bg-slate-850'
+                }`}
+              >
+                <Code2 className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Hackathons</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onTabChange('internships');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`flex items-center space-x-2.5 p-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
+                  currentTab === 'internships'
+                    ? 'bg-blue-950/60 text-blue-200 border-blue-800'
+                    : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:bg-slate-850'
+                }`}
+              >
+                <Briefcase className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span>Internships</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onTabChange('research');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`flex items-center space-x-2.5 p-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
+                  currentTab === 'research'
+                    ? 'bg-purple-950/60 text-purple-200 border-purple-800'
+                    : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:bg-slate-850'
+                }`}
+              >
+                <GraduationCap className="w-4 h-4 text-purple-400 shrink-0" />
+                <span>Fellowships</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onTabChange('opensource');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`flex items-center space-x-2.5 p-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
+                  currentTab === 'opensource'
+                    ? 'bg-emerald-950/60 text-emerald-200 border-emerald-800'
+                    : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:bg-slate-850'
+                }`}
+              >
+                <GitPullRequest className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Open Source</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Platform Shortcuts */}
+          <div className="space-y-1 pt-1 border-t border-slate-800/80">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold block mb-1.5 px-1">
+              ACTIONS & CONTROLS
+            </span>
+
+            {/* Admin Mode Shortcut */}
+            <button
+              onClick={() => {
+                onTabChange('admin');
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-rose-950/30 border border-rose-900/40 text-rose-300 hover:bg-rose-950/50 text-xs font-semibold transition-all"
+            >
+              <div className="flex items-center space-x-2.5">
+                <ShieldCheck className="w-4 h-4 text-rose-400" />
+                <span>{isAdmin ? 'Admin Operations Console' : 'Sign in as Admin / Request Access'}</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-rose-400/70" />
+            </button>
+
+            {/* Share */}
+            {onOpenShare && (
+              <button
+                onClick={() => {
+                  onOpenShare();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-200 text-xs font-medium transition-all"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <Share2 className="w-4 h-4 text-cyan-400" />
+                  <span>Share NexUP</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </button>
+            )}
+
+            {/* Personalization */}
+            <button
+              onClick={() => {
+                onOpenPersonalization();
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-200 text-xs font-medium transition-all"
+            >
+              <div className="flex items-center space-x-2.5">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Personalize Preferences</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-500" />
+            </button>
+
+            {/* Settings / Manage Alerts */}
+            <button
+              onClick={() => {
+                onOpenManageAlerts();
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-200 text-xs font-medium transition-all"
+            >
+              <div className="flex items-center space-x-2.5">
+                <Settings className="w-4 h-4 text-slate-400" />
+                <span>Settings & Manage Alerts</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-500" />
+            </button>
+
+            {/* Help & Community */}
+            <a
+              href="https://chat.whatsapp.com/IythdNIQIgI4dUQ9GhGw7J"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-200 text-xs font-medium transition-all"
+            >
+              <div className="flex items-center space-x-2.5">
+                <HelpCircle className="w-4 h-4 text-emerald-400" />
+                <span>Community WhatsApp</span>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+            </a>
+
+            {/* Sign Out / Switch Account */}
+            <button
+              onClick={() => {
+                onLogout();
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center space-x-2.5 p-2.5 rounded-xl text-rose-400 hover:bg-rose-950/20 text-xs font-semibold transition-all pt-3"
+            >
+              <LogOut className="w-4 h-4 text-rose-400" />
+              <span>{currentUser ? 'Sign out of NexUP' : 'Sign in / Switch account'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   );
 };

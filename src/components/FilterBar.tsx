@@ -105,13 +105,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
 
         {/* Sort & View Mode controls */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="relative flex items-center">
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial flex items-center">
             <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
             <select
               value={filters.sortBy}
               onChange={(e) => onFilterChange({ sortBy: e.target.value as any })}
-              className="pl-8 pr-7 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors"
+              className="w-full sm:w-auto pl-8 pr-7 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors"
             >
               {sortOptions.map((opt) => (
                 <option key={opt.value} value={opt.value} className="bg-slate-900 text-slate-100">

@@ -99,23 +99,30 @@ export function getCategoryBadge(category: Opportunity['category']): {
     case 'hackathon':
       return {
         label: 'Hackathon',
-        bgClass: 'bg-violet-950/70',
-        textClass: 'text-violet-300',
-        borderClass: 'border-violet-800/60',
+        bgClass: 'bg-amber-950/70',
+        textClass: 'text-amber-300',
+        borderClass: 'border-amber-700/60',
       };
     case 'internship':
       return {
         label: 'Internship',
         bgClass: 'bg-blue-950/70',
-        textClass: 'text-blue-300',
-        borderClass: 'border-blue-800/60',
+        textClass: 'text-cyan-300',
+        borderClass: 'border-blue-700/60',
       };
     case 'research':
       return {
         label: 'Research',
+        bgClass: 'bg-purple-950/70',
+        textClass: 'text-purple-300',
+        borderClass: 'border-purple-700/60',
+      };
+    case 'opensource':
+      return {
+        label: 'Open Source',
         bgClass: 'bg-emerald-950/70',
         textClass: 'text-emerald-300',
-        borderClass: 'border-emerald-800/60',
+        borderClass: 'border-emerald-700/60',
       };
     default:
       return {

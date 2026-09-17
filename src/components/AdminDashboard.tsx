@@ -26,11 +26,14 @@ import {
   Users,
   UserPlus,
   FileText,
-  UploadCloud
+  UploadCloud,
+  GitPullRequest,
+  MessageSquare
 } from 'lucide-react';
 import { Opportunity, OpportunityCategory, User } from '../types';
 import { formatDeadline } from '../utils';
 import { AdminManagementPanel } from './AdminManagementPanel';
+import { AdminFeedbackPanel } from './AdminFeedbackPanel';
 import { AIExtractorModal } from './AIExtractorModal';
 
 interface AdminDashboardProps {
@@ -50,8 +53,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   previousTabName,
   currentUser,
 }) => {
-  // Admin subtabs: Overview, Past Dues, All Opportunities, AI Review Queue, + New Opportunity, Admins (Add other admins)
-  const [activeTab, setActiveTab] = useState<'overview' | 'past_dues' | 'manage' | 'review' | 'create' | 'admins'>('overview');
+  // Admin subtabs: Overview, Past Dues, All Opportunities, AI Review Queue, + New Opportunity, Admins (Add other admins), Feedbacks
+  const [activeTab, setActiveTab] = useState<'overview' | 'past_dues' | 'manage' | 'review' | 'create' | 'admins' | 'feedbacks'>('overview');
   const [stats, setStats] = useState<any>(null);
   const [reviewQueue, setReviewQueue] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
@@ -103,7 +106,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     institution: '',
     researchArea: '',
     funding: '',
+    programType: '',
+    projectUrl: '',
   });
+
+  const [editingOpportunityId, setEditingOpportunityId] = useState<string | null>(null);
 
   // Delete modal state
   const [deleteTarget, setDeleteTarget] = useState<Opportunity | null>(null);
@@ -140,14 +147,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         skills: formData.skills.split(',').map((s) => s.trim()).filter(Boolean),
       };
 
-      const res = await fetch('/api/opportunities', {
-        method: 'POST',
+      const endpoint = editingOpportunityId ? `/api/opportunities/${editingOpportunityId}` : '/api/opportunities';
+      const method = editingOpportunityId ? 'PATCH' : 'POST';
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json', 'x-user-id': 'admin-demo-1' },
         body: JSON.stringify(payload),
       });
 
       if (res.ok) {
-        setFeedback({ type: 'success', message: 'Opportunity successfully created and published!' });
+        setFeedback({
+          type: 'success',
+          message: editingOpportunityId
+            ? 'Opportunity changes successfully updated!'
+            : 'Opportunity successfully created and published!',
+        });
+        setEditingOpportunityId(null);
         onRefreshOpportunities();
         fetchAdminData();
         setActiveTab('manage');
@@ -257,6 +273,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleEditAndApprove = (op: Opportunity) => {
+    setEditingOpportunityId(op.id);
     setFormData({
       name: op.name,
       organization: op.organization,
@@ -284,6 +301,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       institution: op.institution || '',
       researchArea: op.researchArea || '',
       funding: op.funding || '',
+      programType: op.programType || '',
+      projectUrl: op.projectUrl || '',
     });
     setActiveTab('create');
   };
@@ -514,7 +533,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab('create')}
+            onClick={() => {
+              if (activeTab !== 'create') {
+                setEditingOpportunityId(null);
+              }
+              setActiveTab('create');
+            }}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
               activeTab === 'create'
                 ? 'bg-rose-950/90 text-rose-200 border border-rose-800/90 font-semibold shadow-xs'
@@ -522,7 +546,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }`}
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>+ New Opportunity</span>
+            <span>{editingOpportunityId ? 'Edit Opportunity' : '+ New Opportunity'}</span>
           </button>
 
           <button
@@ -536,6 +560,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           >
             <Users className="w-3.5 h-3.5" />
             <span>Add Other Admins</span>
+          </button>
+
+          <button
+            id="tab-feedbacks"
+            onClick={() => setActiveTab('feedbacks')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
+              activeTab === 'feedbacks'
+                ? 'bg-rose-950/90 text-rose-200 border border-rose-800/90 font-semibold shadow-xs'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Feedbacks</span>
           </button>
         </div>
         </div>
@@ -571,11 +608,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </p>
             </div>
 
-            <div className="flex items-center space-x-2.5">
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
               <button
                 onClick={handleRunExpiryJob}
                 disabled={runningJob}
-                className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 border border-slate-750 transition-colors disabled:opacity-50 shadow-xs"
+                className="inline-flex items-center justify-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 border border-slate-750 transition-colors disabled:opacity-50 shadow-xs"
               >
                 <Clock className="w-3.5 h-3.5 text-slate-400" />
                 <span>Run Expiry Job</span>
@@ -584,32 +621,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <button
                 onClick={handleRunAIDiscovery}
                 disabled={runningJob}
-                className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white transition-colors disabled:opacity-50 shadow-xs shadow-indigo-600/20"
+                className="inline-flex items-center justify-center space-x-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white transition-colors disabled:opacity-50 shadow-xs shadow-indigo-600/20"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Trigger AI Discovery</span>
+                <span>AI Discovery</span>
               </button>
 
               <button
                 onClick={() => setIsExtractorOpen(true)}
-                className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-xs font-semibold text-white transition-colors shadow-xs shadow-indigo-600/20"
+                className="inline-flex items-center justify-center space-x-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-xs font-semibold text-white transition-colors shadow-xs shadow-indigo-600/20"
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>Import PDF / Links</span>
+                <span>Import PDF/Link</span>
               </button>
 
               <button
-                onClick={() => setActiveTab('create')}
-                className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-semibold text-white transition-colors shadow-xs shadow-violet-600/20"
+                onClick={() => {
+                  setEditingOpportunityId(null);
+                  setActiveTab('create');
+                }}
+                className="inline-flex items-center justify-center space-x-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-semibold text-white transition-colors shadow-xs shadow-violet-600/20"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ New Opportunity</span>
+                <span>+ New Listing</span>
               </button>
             </div>
           </div>
 
-          {/* 4 Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 5 Metric Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             {/* Total Listed */}
             <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-col justify-between">
               <div className="flex items-center justify-between">
@@ -681,6 +721,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {stats?.research || opportunities.filter((o) => o.category === 'research').length}
                 </span>
                 <p className="text-xs text-slate-400 mt-1">Funded fellowships</p>
+              </div>
+            </div>
+
+            {/* Open Source */}
+            <div className="col-span-2 sm:col-span-1 bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+                  OPEN SOURCE
+                </span>
+                <div className="w-8 h-8 rounded-lg bg-amber-950/60 border border-amber-800/60 flex items-center justify-center text-amber-400">
+                  <GitPullRequest className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-3">
+                <span className="text-3xl font-extrabold text-white">
+                  {stats?.opensource || opportunities.filter((o) => o.category === 'opensource').length}
+                </span>
+                <p className="text-xs text-slate-400 mt-1">GSoC, LFX & fellowships</p>
               </div>
             </div>
           </div>
@@ -756,7 +814,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table: md+ screens */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 uppercase font-mono text-[10px]">
                   <tr>
@@ -812,6 +871,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Card Feed: < md screens (Zero horizontal scrolling) */}
+            <div className="block md:hidden divide-y divide-slate-800/80">
+              {opportunities.slice(0, 6).map((op) => (
+                <div
+                  key={op.id}
+                  onClick={() => onSelectOpportunity?.(op)}
+                  className="p-3.5 space-y-2 hover:bg-slate-850/50 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded ${
+                        op.category === 'hackathon'
+                          ? 'bg-violet-950/70 text-violet-300 border border-violet-800/80'
+                          : op.category === 'internship'
+                          ? 'bg-blue-950/70 text-blue-300 border border-blue-800/80'
+                          : 'bg-emerald-950/70 text-emerald-300 border border-emerald-800/80'
+                      }`}
+                    >
+                      {op.category}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {op.source.includes('AI') ? 'AI AGENT' : 'MANUAL'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs font-bold text-white line-clamp-1">{op.name}</h4>
+                    <p className="text-[11px] text-slate-400">{op.organization}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 text-[11px] font-mono text-slate-300 border-t border-slate-800/60">
+                    <span>Due: {formatDeadline(op.deadline)}</span>
+                    <span className="text-blue-400 font-semibold inline-flex items-center gap-1">
+                      <span>View</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -853,7 +953,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           {/* Quick Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
             <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
               <div className="text-[11px] font-mono text-slate-400 uppercase">Total Past Due</div>
               <div className="text-2xl font-black text-red-400 mt-1">{pastDueOpportunities.length}</div>
@@ -876,6 +976,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {pastDueOpportunities.filter((o) => o.category === 'research').length}
               </div>
             </div>
+            <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <div className="text-[11px] font-mono text-slate-400 uppercase">Expired Open Source</div>
+              <div className="text-2xl font-black text-amber-400 mt-1">
+                {pastDueOpportunities.filter((o) => o.category === 'opensource').length}
+              </div>
+            </div>
           </div>
 
           {/* Search & Filter Bar */}
@@ -892,7 +998,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
 
             <div className="flex items-center space-x-1.5 shrink-0 overflow-x-auto w-full sm:w-auto">
-              {(['all', 'hackathon', 'internship', 'research'] as const).map((cat) => (
+              {(['all', 'hackathon', 'internship', 'research', 'opensource'] as const).map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setPastDueCategory(cat)}
@@ -902,7 +1008,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       : 'text-slate-400 hover:text-white hover:bg-slate-800'
                   }`}
                 >
-                  {cat === 'all' ? 'All Expired' : cat + 's'}
+                  {cat === 'all' ? 'All Expired' : cat === 'opensource' ? 'Open Source' : cat + 's'}
                 </button>
               ))}
             </div>
@@ -923,7 +1029,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           ) : (
             <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
-              <div className="overflow-x-auto">
+              {/* Desktop Table: md+ screens */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 uppercase font-mono text-[10px]">
                     <tr>
@@ -977,10 +1084,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   ? 'bg-amber-950/70 text-amber-300 border border-amber-800/80'
                                   : op.category === 'internship'
                                   ? 'bg-blue-950/70 text-blue-300 border border-blue-800/80'
+                                  : op.category === 'opensource'
+                                  ? 'bg-orange-950/70 text-orange-300 border border-orange-800/80'
                                   : 'bg-fuchsia-950/70 text-fuchsia-300 border border-fuchsia-800/80'
                               }`}
                             >
-                              {op.category}
+                              {op.category === 'opensource' ? 'Open Source' : op.category}
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-slate-300 text-xs truncate max-w-xs">
@@ -1038,6 +1147,76 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile Past Dues Cards (< md breakpoint: zero horizontal scrolling) */}
+              <div className="block md:hidden divide-y divide-slate-800/80">
+                {filteredPastDues.map((op) => {
+                  const daysOverdue = getDaysOverdue(op.deadline);
+                  return (
+                    <div key={op.id} className="p-4 space-y-3 hover:bg-slate-850/50 transition-colors">
+                      {/* Header row: category + expired pill */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded ${
+                            op.category === 'hackathon'
+                              ? 'bg-amber-950/70 text-amber-300 border border-amber-800/80'
+                              : op.category === 'internship'
+                              ? 'bg-blue-950/70 text-blue-300 border border-blue-800/80'
+                              : op.category === 'opensource'
+                              ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-800/80'
+                              : 'bg-fuchsia-950/70 text-fuchsia-300 border border-fuchsia-800/80'
+                          }`}
+                        >
+                          {op.category === 'opensource' ? 'Open Source' : op.category}
+                        </span>
+                        <span className="text-[10px] font-mono font-bold text-red-400 bg-red-950/80 border border-red-800 px-2 py-0.5 rounded flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>Expired {daysOverdue}d ago</span>
+                        </span>
+                      </div>
+
+                      {/* Title + Organization */}
+                      <div>
+                        <h4 className="text-xs font-bold text-white line-clamp-2 leading-snug">{op.name}</h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{op.organization}</p>
+                      </div>
+
+                      {/* Deadline text */}
+                      <div className="text-[11px] font-mono text-slate-400 pt-1 border-t border-slate-800/60 flex items-center justify-between">
+                        <span>Original Deadline:</span>
+                        <strong className="text-slate-200">{formatDeadline(op.deadline)}</strong>
+                      </div>
+
+                      {/* Touch action buttons */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <button
+                          onClick={() => handleExtendDeadline(op, 14)}
+                          className="flex-1 py-1.5 px-2 bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/70 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1 transition-colors"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          <span>+14d</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleEditOpportunity(op)}
+                          className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1 transition-colors"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>Edit</span>
+                        </button>
+
+                        <button
+                          onClick={() => setDeleteTarget(op)}
+                          className="flex-1 py-1.5 px-2 bg-red-950/60 hover:bg-red-900/70 text-red-300 border border-red-800/70 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Remove</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -1058,7 +1237,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
 
             <button
-              onClick={() => setActiveTab('create')}
+              onClick={() => {
+                setEditingOpportunityId(null);
+                setActiveTab('create');
+              }}
               className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-semibold text-white transition-colors shadow-xs shadow-violet-600/20 shrink-0 self-start sm:self-auto"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -1088,6 +1270,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <option value="hackathon">Hackathon</option>
               <option value="internship">Internship</option>
               <option value="research">Research</option>
+              <option value="opensource">Open Source</option>
             </select>
 
             <button
@@ -1100,7 +1283,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* Full Opportunities Table */}
           <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
-            <div className="overflow-x-auto">
+            {/* Desktop Table: md+ screens */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 uppercase font-mono text-[10px]">
                   <tr>
@@ -1131,10 +1315,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               ? 'bg-violet-950/70 text-violet-300 border border-violet-800/80'
                               : op.category === 'internship'
                               ? 'bg-blue-950/70 text-blue-300 border border-blue-800/80'
+                              : op.category === 'opensource'
+                              ? 'bg-amber-950/70 text-amber-300 border border-amber-800/80'
                               : 'bg-emerald-950/70 text-emerald-300 border border-emerald-800/80'
                           }`}
                         >
-                          {op.category}
+                          {op.category === 'opensource' ? 'Open Source' : op.category}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-slate-300 text-xs truncate max-w-xs whitespace-nowrap">
@@ -1176,6 +1362,86 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile All Opportunities Cards (< md breakpoint: zero horizontal scrolling) */}
+            <div className="block md:hidden divide-y divide-slate-800/80">
+              {filteredOpportunities.map((op) => (
+                <div
+                  key={op.id}
+                  className="p-4 space-y-3 hover:bg-slate-850/50 transition-colors"
+                >
+                  {/* Top row: Category + Deadline Status */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded ${
+                        op.category === 'hackathon'
+                          ? 'bg-violet-950/70 text-violet-300 border border-violet-800/80'
+                          : op.category === 'internship'
+                          ? 'bg-blue-950/70 text-blue-300 border border-blue-800/80'
+                          : op.category === 'opensource'
+                          ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-800/80'
+                          : 'bg-amber-950/70 text-amber-300 border border-amber-800/80'
+                      }`}
+                    >
+                      {op.category === 'opensource' ? 'Open Source' : op.category}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {getDeadlineBadge(op.deadline)}
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {op.source.includes('AI') ? 'AI' : 'Manual'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Title + Org */}
+                  <div>
+                    <h4 className="text-xs font-bold text-white line-clamp-2 leading-snug">{op.name}</h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{op.organization}</p>
+                  </div>
+
+                  {/* Deadline row */}
+                  <div className="text-[11px] font-mono text-slate-400 pt-1 border-t border-slate-800/60 flex items-center justify-between">
+                    <span>Deadline:</span>
+                    <strong className="text-slate-200">{formatDeadline(op.deadline)}</strong>
+                  </div>
+
+                  {/* Action buttons row */}
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      onClick={() => onSelectOpportunity?.(op)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-700 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Preview</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setEditingOpportunityId(op.id);
+                        setActiveTab('create');
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-700 cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      onClick={() => setDeleteTarget(op)}
+                      className="px-3 py-1.5 rounded-xl bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 border border-rose-800/60 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Archive</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {filteredOpportunities.length === 0 && (
+                <div className="p-8 text-center text-slate-500 text-xs">
+                  No opportunities matching current search or filters.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1237,10 +1503,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           ? 'bg-violet-950/70 text-violet-300 border border-violet-800/80'
                           : op.category === 'internship'
                           ? 'bg-blue-950/70 text-blue-300 border border-blue-800/80'
+                          : op.category === 'opensource'
+                          ? 'bg-amber-950/70 text-amber-300 border border-amber-800/80'
                           : 'bg-emerald-950/70 text-emerald-300 border border-emerald-800/80'
                       }`}
                     >
-                      {op.category}
+                      {op.category === 'opensource' ? 'Open Source' : op.category}
                     </span>
                     <span className="text-xs font-semibold text-white">{op.organization}</span>
                     <span className="text-slate-600 hidden sm:inline">•</span>
@@ -1389,9 +1657,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl space-y-6">
             <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">Add New Opportunity</h2>
+              <h2 className="text-lg font-bold text-white tracking-tight">
+                {editingOpportunityId ? 'Edit Opportunity' : 'Add New Opportunity'}
+              </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Choose the opportunity category to dynamically adapt form fields.
+                {editingOpportunityId
+                  ? 'Update details, deadlines, links, and category-specific parameters.'
+                  : 'Choose the opportunity category to dynamically adapt form fields.'}
               </p>
             </div>
 
@@ -1401,11 +1673,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono block mb-2.5">
                   1. SELECT CATEGORY
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   {[
                     { id: 'hackathon', label: 'Hackathon', desc: 'Coding sprints, ideathons', icon: Award },
                     { id: 'internship', label: 'Internship', desc: 'SWE, AI, quant roles', icon: Briefcase },
                     { id: 'research', label: 'Research', desc: 'Labs, fellowships', icon: GraduationCap },
+                    { id: 'opensource', label: 'Open Source', desc: 'GSoC, LFX, contributor tracks', icon: GitPullRequest },
                   ].map((item) => {
                     const Icon = item.icon;
                     const isSelected = formData.category === item.id;
@@ -1740,6 +2013,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                   </div>
                 )}
+
+                {formData.category === 'opensource' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <div>
+                      <label className="font-semibold text-slate-300 block mb-1">Program Type / Track</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Mentorship Program, Fellowship, Bug Bounty"
+                        value={formData.programType}
+                        onChange={(e) => setFormData({ ...formData, programType: e.target.value })}
+                        className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-300 block mb-1">Stipend / Grants / Perks</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. $3,000 Stipend + Mentorship"
+                        value={formData.stipend}
+                        onChange={(e) => setFormData({ ...formData, stipend: e.target.value })}
+                        className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-slate-300 block mb-1">Repository / Project URL</label>
+                      <input
+                        type="url"
+                        placeholder="e.g. https://github.com/organization/repo"
+                        value={formData.projectUrl}
+                        onChange={(e) => setFormData({ ...formData, projectUrl: e.target.value })}
+                        className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Bottom Form Actions */}
@@ -1758,7 +2068,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="inline-flex items-center space-x-1.5 px-5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs transition-colors shadow-xs shadow-violet-600/30 disabled:opacity-50"
                 >
                   <CheckCircle className="w-3.5 h-3.5" />
-                  <span>{loading ? 'Publishing...' : 'Publish Opportunity'}</span>
+                  <span>
+                    {loading
+                      ? editingOpportunityId
+                        ? 'Saving Changes...'
+                        : 'Publishing...'
+                      : editingOpportunityId
+                      ? 'Save Changes'
+                      : 'Publish Opportunity'}
+                  </span>
                 </button>
               </div>
             </form>
@@ -1773,6 +2091,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <AdminManagementPanel
           currentUser={currentUser}
           onRefreshStats={fetchAdminData}
+        />
+      )}
+
+      {/* =========================================================================
+          TAB 7: USER FEEDBACKS & BUG REPORTS
+         ========================================================================= */}
+      {activeTab === 'feedbacks' && (
+        <AdminFeedbackPanel
+          currentUser={currentUser}
         />
       )}
 

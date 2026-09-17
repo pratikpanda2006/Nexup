@@ -436,6 +436,7 @@ export const AIExtractorModal: React.FC<AIExtractorModalProps> = ({
                 <option value="hackathon">Hackathons (Competitions / Challenges)</option>
                 <option value="internship">Internships (Industry Roles)</option>
                 <option value="research">Research (Fellowships / Labs)</option>
+                <option value="opensource">Open Source (Programs / Fellowships / Sprints)</option>
                 <option value="all">Auto-detect All Categories</option>
               </select>
             </div>

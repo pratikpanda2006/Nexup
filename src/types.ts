@@ -1,4 +1,4 @@
-export type OpportunityCategory = 'hackathon' | 'internship' | 'research';
+export type OpportunityCategory = 'hackathon' | 'internship' | 'research' | 'opensource';
 
 export type OpportunityStatus = 'open' | 'closing_soon' | 'closed' | 'archived';
 
@@ -51,6 +51,10 @@ export interface Opportunity {
   researchArea?: string;
   funding?: string;
   positionType?: string; // 'Fellowship' | 'Research Assistant' | 'Open Research Project'
+
+  // Open Source specific
+  programType?: string; // 'Mentorship Program' | 'Contributor Fellowship' | 'Student Sprint' | 'Bug Bounty'
+  projectUrl?: string;
 }
 
 export interface User {
@@ -149,3 +153,19 @@ export interface AdminAccessRequest {
   reviewedBy?: string;
   reviewedAt?: string;
 }
+
+export interface FeedbackItem {
+  id: string;
+  userId?: string;
+  userName?: string;
+  userEmail?: string;
+  type: 'bug' | 'feedback' | 'feature';
+  title: string;
+  description: string;
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  status: 'pending' | 'resolved';
+  resolvedAt?: string;
+  resolvedBy?: string;
+  createdAt: string;
+}
+

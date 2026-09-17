@@ -48,6 +48,11 @@ export const SavedPage: React.FC<SavedPageProps> = ({
       label: 'Research',
       count: savedOpportunities.filter((o) => o.category === 'research').length,
     },
+    {
+      id: 'opensource',
+      label: 'Open Source',
+      count: savedOpportunities.filter((o) => o.category === 'opensource').length,
+    },
   ];
 
   return (

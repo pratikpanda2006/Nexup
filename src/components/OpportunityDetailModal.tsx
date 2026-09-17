@@ -19,7 +19,8 @@ import {
   GraduationCap,
   ChevronRight,
   ShieldCheck,
-  Bot
+  Bot,
+  GitPullRequest
 } from 'lucide-react';
 import { Opportunity, EligibilityResult, User } from '../types';
 import { getDeadlineBadgeInfo, getCategoryBadge, formatDeadline, formatDateRange } from '../utils';
@@ -147,16 +148,16 @@ export const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
         </div>
 
         {/* Scrollable Content Body */}
-        <div className="overflow-y-auto p-6 space-y-6">
+        <div className="overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
           {/* Main Title & Organization Banner */}
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-3 sm:gap-4">
             <img
               src={opportunity.logoUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=128&auto=format&fit=crop&q=80'}
               alt={opportunity.organization}
-              className="w-16 h-16 rounded-xl object-cover border border-slate-750 shrink-0 bg-slate-800 shadow-md"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl object-cover border border-slate-750 shrink-0 bg-slate-800 shadow-md"
             />
-            <div className="flex-1">
-              <h2 className="text-2xl font-extrabold text-white tracking-tight">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight break-words">
                 {opportunity.name}
               </h2>
               <p className="text-sm font-semibold text-slate-400 mt-1">
@@ -179,18 +180,37 @@ export const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 text-xs">
             <div>
               <span className="text-[10px] uppercase font-mono text-slate-400 font-semibold block">
-                {opportunity.category === 'hackathon' ? 'Prize Pool' : opportunity.category === 'internship' ? 'Stipend' : 'Funding'}
+                {opportunity.category === 'hackathon'
+                  ? 'Prize Pool'
+                  : opportunity.category === 'internship'
+                  ? 'Stipend'
+                  : opportunity.category === 'opensource'
+                  ? 'Stipend / Grant'
+                  : 'Funding'}
               </span>
               <span className="font-bold text-white text-sm mt-0.5 block truncate">
-                {opportunity.prizePool || opportunity.stipend || opportunity.funding || 'Academic Bursary'}
+                {opportunity.prizePool ||
+                  opportunity.stipend ||
+                  opportunity.funding ||
+                  (opportunity.category === 'opensource' ? 'Community Grants' : 'Academic Bursary')}
               </span>
             </div>
             <div>
               <span className="text-[10px] uppercase font-mono text-slate-400 font-semibold block">
-                {opportunity.category === 'hackathon' ? 'Team Format' : opportunity.category === 'internship' ? 'Duration' : 'Position'}
+                {opportunity.category === 'hackathon'
+                  ? 'Team Format'
+                  : opportunity.category === 'internship'
+                  ? 'Duration'
+                  : opportunity.category === 'opensource'
+                  ? 'Program Track'
+                  : 'Position'}
               </span>
               <span className="font-bold text-white text-sm mt-0.5 block truncate">
-                {opportunity.teamSize || opportunity.duration || opportunity.positionType || '1-4 Members'}
+                {opportunity.teamSize ||
+                  opportunity.duration ||
+                  opportunity.programType ||
+                  opportunity.positionType ||
+                  (opportunity.category === 'opensource' ? 'Contributor Fellowship' : '1-4 Members')}
               </span>
             </div>
             <div>
@@ -340,12 +360,24 @@ export const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
         </div>
 
         {/* Fixed Footer with Official Action Buttons */}
-        <div className="px-6 py-4 bg-slate-950/80 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-slate-400">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-950/80 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
+          <div className="text-xs text-slate-400 self-start sm:self-auto">
             Source: <span className="font-medium text-slate-300">{opportunity.source}</span>
           </div>
 
-          <div className="flex items-center space-x-2 w-full sm:w-auto">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+            {opportunity.projectUrl && (
+              <a
+                href={opportunity.projectUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl border border-amber-800/80 bg-amber-950/50 hover:bg-amber-900/60 text-xs font-semibold text-amber-300 transition-colors"
+              >
+                <GitPullRequest className="w-3.5 h-3.5" />
+                <span>Repository</span>
+              </a>
+            )}
+
             <button
               onClick={() => onOpenReminder(opportunity)}
               className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-750 text-xs font-semibold text-slate-200 transition-colors"

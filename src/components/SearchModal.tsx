@@ -21,7 +21,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   onToggleBookmark,
 }) => {
   const [query, setQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'hackathon' | 'internship' | 'research'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'hackathon' | 'internship' | 'research' | 'opensource'>('all');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -89,7 +89,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
         {/* Category Filters */}
         <div className="flex items-center space-x-1.5 px-4 py-2.5 border-b border-slate-800/80 bg-slate-900/90 text-xs overflow-x-auto">
-          {(['all', 'hackathon', 'internship', 'research'] as const).map((cat) => (
+          {(['all', 'hackathon', 'internship', 'research', 'opensource'] as const).map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -99,7 +99,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
-              {cat === 'all' ? 'All Opportunities' : cat === 'research' ? 'Research Fellowships' : `${cat}s`}
+              {cat === 'all'
+                ? 'All Opportunities'
+                : cat === 'research'
+                ? 'Research Fellowships'
+                : cat === 'opensource'
+                ? 'Open Source'
+                : `${cat}s`}
             </button>
           ))}
           <span className="ml-auto text-xs text-slate-400 font-mono hidden sm:inline">

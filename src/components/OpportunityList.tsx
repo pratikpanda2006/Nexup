@@ -129,10 +129,15 @@ export const OpportunityList: React.FC<OpportunityListProps> = ({
           title: 'Academic Research & Fellowships',
           description: 'Faculty-led lab assistantships, summer research fellowships, and publication programs in structured summary view.',
         };
+      case 'opensource':
+        return {
+          title: 'Open Source Programs & Fellowships',
+          description: 'Global open source initiatives, contributor fellowships, GSoC, LFX, Outreachy, and sponsored sprints.',
+        };
       default:
         return {
           title: 'All Student Opportunities',
-          description: 'Complete summary directory of vetted hackathons, internships, and research programs.',
+          description: 'Complete summary directory of vetted hackathons, internships, open source programs, and research.',
         };
     }
   };

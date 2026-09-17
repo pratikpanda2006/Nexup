@@ -10,7 +10,8 @@ import {
   DollarSign, 
   Sparkles,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  GitPullRequest
 } from 'lucide-react';
 import { Opportunity } from '../types';
 import { getDeadlineBadgeInfo, getCategoryBadge, formatDeadline } from '../utils';
@@ -117,6 +118,12 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             <>
               <Sparkles className="w-3.5 h-3.5 text-violet-400 shrink-0" />
               <span className="truncate">{opportunity.funding || opportunity.researchArea || 'Research Fellowship'}</span>
+            </>
+          )}
+          {opportunity.category === 'opensource' && (
+            <>
+              <GitPullRequest className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="truncate">{opportunity.stipend || opportunity.programType || 'Open Source Contributor Track'}</span>
             </>
           )}
         </div>

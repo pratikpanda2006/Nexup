@@ -215,10 +215,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {step === 'welcome' && (
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-16 text-center max-w-2xl mx-auto w-full animate-in fade-in duration-500">
           {/* Centered Logo with Glowing Halo */}
-          <div className="relative mb-6 group">
+          <div className="relative mb-4 group">
             <div className="absolute -inset-8 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-400/30 transition-all duration-700 pointer-events-none" />
             <div className="relative transform hover:scale-[1.02] transition-transform duration-300">
-              <NexUpLogo size="hero" showTagline={true} glow={true} />
+              <NexUpLogo size="hero" showTagline={false} glow={true} />
             </div>
           </div>
 

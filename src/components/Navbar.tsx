@@ -13,7 +13,9 @@ import {
   Menu,
   X,
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
+  GitPullRequest,
+  Share2
 } from 'lucide-react';
 import { User } from '../types';
 import { NexUpLogo } from './NexUpLogo';
@@ -30,6 +32,7 @@ interface NavbarProps {
   onOpenAuth: () => void;
   onSwitchDemoRole: (role: 'user' | 'admin') => void;
   onSearchClick?: () => void;
+  onOpenShare?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -44,6 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
   onSwitchDemoRole,
   onSearchClick,
+  onOpenShare,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -53,6 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'hackathons', label: 'Hackathons', icon: Code2 },
     { id: 'internships', label: 'Internships', icon: Briefcase },
     { id: 'research', label: 'Research', icon: GraduationCap },
+    { id: 'opensource', label: 'Open Source', icon: GitPullRequest },
     { id: 'saved', label: 'Saved', icon: Bookmark, badge: savedCount > 0 ? savedCount : undefined },
   ];
 
@@ -161,6 +166,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Admin
               </button>
             </div>
+
+            {/* Share Platform Button */}
+            {onOpenShare && (
+              <button
+                onClick={onOpenShare}
+                className="flex items-center space-x-1.5 text-xs text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-850 px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-blue-500/50 transition-colors cursor-pointer"
+                title="Share NexUP (https://nexup.onrender.com)"
+              >
+                <Share2 className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline font-semibold">Share</span>
+              </button>
+            )}
 
             {/* Notification Bell */}
             <button

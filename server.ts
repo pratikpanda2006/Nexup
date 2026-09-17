@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import { db, ADMIN_ALLOWLIST } from './server/store';
 import { createServer as createViteServer } from 'vite';
+
 
 dotenv.config();
 
@@ -301,6 +303,7 @@ app.get('/api/admin/stats', async (req, res) => {
     hackathons: allOps.filter((o) => o.category === 'hackathon' && o.verificationStatus === 'verified').length,
     internships: allOps.filter((o) => o.category === 'internship' && o.verificationStatus === 'verified').length,
     research: allOps.filter((o) => o.category === 'research' && o.verificationStatus === 'verified').length,
+    opensource: allOps.filter((o) => o.category === 'opensource' && o.verificationStatus === 'verified').length,
     active: activeOps.length,
     expired: expiredOps.length,
     pendingReview: reviewQueue.length,
@@ -701,6 +704,96 @@ app.patch('/api/user/profile', async (req, res) => {
   const userId = req.user?.id || 'user-demo-1';
   const updated = await db.updateUser(userId, req.body);
   res.json({ data: updated });
+});
+
+// --- FEEDBACK & BUG REPORT ROUTES ---
+app.get('/api/feedback', async (req, res) => {
+  try {
+    const status = req.query.status as string | undefined;
+    const all = await db.getFeedbacks();
+    const filtered = status && status !== 'all' ? all.filter((f) => f.status === status) : all;
+    const pendingCount = all.filter((f) => f.status === 'pending').length;
+    const resolvedCount = all.filter((f) => f.status === 'resolved').length;
+    const bugsCount = all.filter((f) => f.type === 'bug' && f.status === 'pending').length;
+    res.json({
+      feedbacks: filtered,
+      stats: {
+        total: all.length,
+        pending: pendingCount,
+        resolved: resolvedCount,
+        bugs: bugsCount,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch feedback' });
+  }
+});
+
+app.post('/api/feedback', async (req, res) => {
+  try {
+    const { userId, userName, userEmail, type, title, description, severity } = req.body;
+    if (!title || !description) {
+      return res.status(400).json({ error: 'Title and description are required' });
+    }
+    const feedback = await db.createFeedback({
+      userId: userId || req.user?.id,
+      userName: userName || req.user?.name,
+      userEmail: userEmail || req.user?.email,
+      type: type || 'feedback',
+      title,
+      description,
+      severity,
+    });
+
+    // Notify primary admins
+    try {
+      const users = await db.getUsers();
+      const admins = users.filter((u) => u.role === 'admin');
+      for (const a of admins) {
+        await db.createNotification({
+          userId: a.id,
+          title: type === 'bug' ? '🚨 New Bug Report Submitted' : '💬 New User Feedback Received',
+          message: `"${title}" submitted by ${userName || userEmail || 'a student user'}.`,
+          type: 'system',
+          read: false,
+        } as any).catch(() => {});
+      }
+    } catch {
+      // Ignore notification failures
+    }
+
+    res.json({
+      success: true,
+      feedback,
+      message: 'Thank you for your feedback! The team has received your report.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to submit feedback' });
+  }
+});
+
+app.patch('/api/feedback/:id/toggle', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const resolvedBy = req.body.resolvedBy || req.user?.email || 'Admin';
+    const updated = await db.toggleResolveFeedback(id, resolvedBy);
+    if (!updated) {
+      return res.status(404).json({ error: 'Feedback item not found' });
+    }
+    res.json({ success: true, feedback: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to update feedback status' });
+  }
+});
+
+app.delete('/api/feedback/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const success = await db.deleteFeedback(id);
+    res.json({ success });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to delete feedback' });
+  }
 });
 
 // --- VITE DEV / PRODUCTION STATIC SERVING ---

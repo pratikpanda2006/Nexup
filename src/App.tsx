@@ -13,8 +13,10 @@ import { OnboardingModal } from './components/OnboardingModal';
 import { ProfileModal } from './components/ProfileModal';
 import { AuthModal } from './components/AuthModal';
 import { AdminSignInCard } from './components/AdminSignInCard';
+import { ShareModal } from './components/ShareModal';
+import { FeedbackModal } from './components/FeedbackModal';
 import { User, Opportunity, NotificationItem, OpportunityCategory } from './types';
-import { Sparkles, CheckCircle2, AlertCircle, ArrowLeft, ShieldAlert } from 'lucide-react';
+import { Sparkles, CheckCircle2, AlertCircle, ArrowLeft, ShieldAlert, Bell, Share2 } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -37,6 +39,8 @@ export default function App() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   // Toast notification
   const [toast, setToast] = useState<{ message: string; type?: 'success' | 'info' } | null>(null);
@@ -58,6 +62,8 @@ export default function App() {
         return 'Hackathons';
       case 'research':
         return 'Research';
+      case 'opensource':
+        return 'Open Source';
       case 'saved':
         return 'Saved';
       case 'admin':
@@ -496,7 +502,7 @@ export default function App() {
   const isUserSignedIn = Boolean(currentUser && currentTab !== 'landing');
 
   return (
-    <div className={`min-h-screen bg-slate-950 flex flex-col font-sans text-slate-100 selection:bg-blue-600 selection:text-white ${isUserSignedIn ? 'pl-16 md:pl-[68px]' : ''}`}>
+    <div className={`min-h-screen bg-slate-950 flex flex-col font-sans text-slate-100 selection:bg-blue-600 selection:text-white ${isUserSignedIn ? 'pb-20 md:pb-0 md:pl-[68px]' : ''}`}>
       {/* Left Sidebar navigation: Shown ONLY after sign-in */}
       {isUserSignedIn && (
         <LeftSidebar
@@ -512,24 +518,57 @@ export default function App() {
           onOpenManageAlerts={handleOpenNotifications}
           onLogout={handleLogout}
           onOpenAuth={handleOpenAuth}
+          onOpenShare={() => setIsShareOpen(true)}
+          onOpenFeedback={() => setIsFeedbackOpen(true)}
         />
       )}
 
-      {/* Mobile Sticky Top Header with Back Button (when on sub-pages) */}
-      {isUserSignedIn && currentTab !== 'dashboard' && (
-        <div className="md:hidden flex items-center justify-between px-3 py-2 bg-slate-900/95 border-b border-slate-800 backdrop-blur-md sticky top-0 z-30">
-          <button
-            type="button"
-            onClick={handleGoBack}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-semibold active:scale-95 transition-all cursor-pointer"
-            title={`Back to ${previousTabName || 'previous step'}`}
-          >
-            <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
-            <span>Back ({previousTabName || 'Dashboard'})</span>
-          </button>
-          <span className="text-xs font-medium text-slate-400 capitalize">
-            {currentTab}
-          </span>
+      {/* Mobile Sticky Top Header (< md breakpoint) */}
+      {isUserSignedIn && (
+        <div className="md:hidden flex items-center justify-between px-3.5 py-2.5 bg-[#020612]/95 border-b border-slate-800/80 backdrop-blur-md sticky top-0 z-30 shadow-xs">
+          {currentTab !== 'dashboard' ? (
+            <button
+              type="button"
+              onClick={handleGoBack}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-semibold active:scale-95 transition-all cursor-pointer"
+              title={`Back to ${previousTabName || 'Dashboard'}`}
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
+              <span>Back ({previousTabName || 'Dashboard'})</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => navigateToTab('dashboard')}
+              className="flex items-center space-x-2 text-left"
+            >
+              <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 p-[1px] flex items-center justify-center shadow-xs shadow-blue-500/30">
+                <div className="w-full h-full bg-[#030718] rounded-[11px] flex items-center justify-center">
+                  <span className="text-[10px] font-black text-cyan-400 font-mono">N</span>
+                </div>
+              </div>
+              <span className="font-extrabold text-sm text-white tracking-tight">NexUP</span>
+            </button>
+          )}
+
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={handleOpenNotifications}
+              className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-850 transition-colors"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadNotifsCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 ring-2 ring-slate-950 animate-pulse" />
+              )}
+            </button>
+            <button
+              onClick={() => setIsShareOpen(true)}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-850 transition-colors"
+              title="Share NexUP"
+            >
+              <Share2 className="w-4 h-4 text-cyan-400" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -564,6 +603,7 @@ export default function App() {
             onOpenReminder={(op) => handleOpenReminder(op)}
             onGoBack={navHistory.length > 0 ? handleGoBack : undefined}
             previousTabName={previousTabName}
+            onOpenShare={() => setIsShareOpen(true)}
           />
         )}
 
@@ -598,6 +638,20 @@ export default function App() {
         {currentTab === 'research' && (
           <OpportunityList
             category="research"
+            opportunities={opportunities}
+            bookmarkedIds={bookmarkedIds}
+            onToggleBookmark={handleToggleBookmark}
+            onOpenReminder={(op) => handleOpenReminder(op)}
+            onViewDetails={(op) => handleOpenOpportunity(op)}
+            initialViewMode={categoryViewMode}
+            onGoBack={handleGoBack}
+            previousTabName={previousTabName}
+          />
+        )}
+
+        {currentTab === 'opensource' && (
+          <OpportunityList
+            category="opensource"
             opportunities={opportunities}
             bookmarkedIds={bookmarkedIds}
             onToggleBookmark={handleToggleBookmark}
@@ -676,6 +730,13 @@ export default function App() {
                 IIT Madras BS Research Hub
               </a>
             </span>
+            <span className="text-slate-600 hidden sm:inline">·</span>
+            <button
+              onClick={() => setIsFeedbackOpen(true)}
+              className="text-amber-400 hover:text-amber-300 font-medium underline underline-offset-4 transition-colors cursor-pointer"
+            >
+              Report Bug / Feedback
+            </button>
           </p>
         </div>
       </footer>
@@ -761,6 +822,21 @@ export default function App() {
         }}
         bookmarkedIds={bookmarkedIds}
         onToggleBookmark={handleToggleBookmark}
+      />
+
+      {/* 8. Share Platform Modal */}
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        url="https://nexup.onrender.com"
+      />
+
+      {/* 9. Feedback & Bug Report Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+        currentUser={currentUser}
+        onSuccess={(msg) => showToast(msg, 'success')}
       />
 
       {/* Global Toast Notification */}

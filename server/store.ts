@@ -1,5 +1,6 @@
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
-import { Opportunity, User, Bookmark, Reminder, NotificationItem, EligibilityResult, AdminRecord, AdminAccessRequest } from '../src/types';
+import { Opportunity, User, Bookmark, Reminder, NotificationItem, EligibilityResult, AdminRecord, AdminAccessRequest, FeedbackItem } from '../src/types';
 import { initialOpportunities } from './seedData';
 import { GoogleGenAI, Type } from '@google/genai';
 import { extractTextFromPdfBuffer, parseOpportunitiesFallback, SAMPLE_SEPTEMBER_2026_HACKATHONS, normalizeDate } from './pdfParser';
@@ -62,6 +63,8 @@ function rowToOpportunity(r: any): Opportunity {
     researchArea: r.research_area,
     funding: r.funding,
     positionType: r.position_type,
+    programType: r.program_type || r.position_type,
+    projectUrl: r.project_url,
   } as Opportunity;
 }
 
@@ -103,6 +106,8 @@ function opportunityToRow(op: Partial<Opportunity>): any {
   if (op.researchArea !== undefined) row.research_area = op.researchArea;
   if (op.funding !== undefined) row.funding = op.funding;
   if (op.positionType !== undefined) row.position_type = op.positionType;
+  if (op.programType !== undefined) row.program_type = op.programType;
+  if (op.projectUrl !== undefined) row.project_url = op.projectUrl;
   return row;
 }
 
@@ -199,7 +204,67 @@ function rowToAdminRequest(r: any): AdminAccessRequest {
   } as AdminAccessRequest;
 }
 
+function rowToFeedback(r: any): FeedbackItem {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    userName: r.user_name,
+    userEmail: r.user_email,
+    type: r.type || 'feedback',
+    title: r.title,
+    description: r.description,
+    severity: r.severity,
+    status: r.status || 'pending',
+    resolvedAt: r.resolved_at,
+    resolvedBy: r.resolved_by,
+    createdAt: r.created_at,
+  } as FeedbackItem;
+}
+
+const initialFeedbacks: FeedbackItem[] = [
+  {
+    id: 'fb-seed-1',
+    userId: 'user-demo-1',
+    userName: 'Pratik Panda',
+    userEmail: 'pratikpanda2006@gmail.com',
+    type: 'bug',
+    title: 'Mobile calendar sync button overflows container margin',
+    description: 'When viewing the opportunity detail modal on screens under 375px width, the calendar sync action button is slightly clipped on the right edge.',
+    severity: 'medium',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600 * 1000 * 4).toISOString(),
+  },
+  {
+    id: 'fb-seed-2',
+    userId: 'user-demo-2',
+    userName: 'Aarav Sharma',
+    userEmail: 'aarav.sharma@campus.edu',
+    type: 'feature',
+    title: 'Support Telegram & Discord alert notifications for hackathons',
+    description: 'It would be amazing to have a Discord webhook or Telegram bot ping us 24h before major AI hackathon registrations close.',
+    severity: 'low',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600 * 1000 * 18).toISOString(),
+  },
+  {
+    id: 'fb-seed-3',
+    userId: 'user-demo-3',
+    userName: 'Sarah Chen',
+    userEmail: 'sarah.chen@university.edu',
+    type: 'feedback',
+    title: 'Love the new Open Source section!',
+    description: 'The separate Open Source initiatives tab with stipend indicators is extremely helpful for student developers targeting GSoC and LFX.',
+    severity: 'low',
+    status: 'resolved',
+    resolvedAt: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
+    resolvedBy: 'pratikpanda2006@gmail.com',
+    createdAt: new Date(Date.now() - 3600 * 1000 * 48).toISOString(),
+  },
+];
+
 class Store {
+  private inMemoryFeedbacks: FeedbackItem[] = [...initialFeedbacks];
+
   // --- OPPORTUNITY METHODS ---
   public async getOpportunities(filter?: {
     category?: string;
@@ -1020,6 +1085,120 @@ Return JSON: score (0-100), verdict, summary, strengths[], gaps[], recommendatio
     if (!req) return { success: false, error: 'Admin permission request not found' };
     await supabase.from('admin_requests').update({ status: 'rejected', reviewed_by: reviewedBy, reviewed_at: new Date().toISOString() }).eq('id', id);
     return { success: true };
+  }
+
+  // --- FEEDBACK & BUG REPORT METHODS ---
+  public async getFeedbacks(statusFilter?: string): Promise<FeedbackItem[]> {
+    try {
+      let query = supabase.from('feedbacks').select('*').order('created_at', { ascending: false });
+      if (statusFilter && statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+      const { data, error } = await query;
+      if (!error && data && data.length >= 0) {
+        return data.map(rowToFeedback);
+      }
+    } catch {
+      // Fallback
+    }
+
+    let list = [...this.inMemoryFeedbacks];
+    if (statusFilter && statusFilter !== 'all') {
+      list = list.filter((f) => f.status === statusFilter);
+    }
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  public async createFeedback(data: {
+    userId?: string;
+    userName?: string;
+    userEmail?: string;
+    type: 'bug' | 'feedback' | 'feature';
+    title: string;
+    description: string;
+    severity?: 'low' | 'medium' | 'high' | 'critical';
+  }): Promise<FeedbackItem> {
+    const newItem: FeedbackItem = {
+      id: `fb-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      userId: data.userId,
+      userName: data.userName || 'Anonymous Student',
+      userEmail: data.userEmail || '',
+      type: data.type || 'feedback',
+      title: data.title.trim(),
+      description: data.description.trim(),
+      severity: data.type === 'bug' ? data.severity || 'medium' : undefined,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      const row = {
+        id: newItem.id,
+        user_id: newItem.userId,
+        user_name: newItem.userName,
+        user_email: newItem.userEmail,
+        type: newItem.type,
+        title: newItem.title,
+        description: newItem.description,
+        severity: newItem.severity,
+        status: newItem.status,
+        created_at: newItem.createdAt,
+      };
+      const { data: inserted, error } = await supabase.from('feedbacks').insert(row).select().single();
+      if (!error && inserted) {
+        return rowToFeedback(inserted);
+      }
+    } catch {
+      // Fallback
+    }
+
+    this.inMemoryFeedbacks.unshift(newItem);
+    return newItem;
+  }
+
+  public async toggleResolveFeedback(id: string, resolvedBy?: string): Promise<FeedbackItem | null> {
+    try {
+      const { data: existing } = await supabase.from('feedbacks').select('*').eq('id', id).maybeSingle();
+      if (existing) {
+        const nextStatus = existing.status === 'resolved' ? 'pending' : 'resolved';
+        const resolvedAt = nextStatus === 'resolved' ? new Date().toISOString() : null;
+        const by = nextStatus === 'resolved' ? (resolvedBy || 'Admin') : null;
+        const { data: updated, error } = await supabase
+          .from('feedbacks')
+          .update({ status: nextStatus, resolved_at: resolvedAt, resolved_by: by })
+          .eq('id', id)
+          .select()
+          .single();
+        if (!error && updated) {
+          return rowToFeedback(updated);
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
+    const item = this.inMemoryFeedbacks.find((f) => f.id === id);
+    if (!item) return null;
+    const nextStatus = item.status === 'resolved' ? 'pending' : 'resolved';
+    item.status = nextStatus;
+    item.resolvedAt = nextStatus === 'resolved' ? new Date().toISOString() : undefined;
+    item.resolvedBy = nextStatus === 'resolved' ? (resolvedBy || 'Admin') : undefined;
+    return item;
+  }
+
+  public async deleteFeedback(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase.from('feedbacks').delete().eq('id', id);
+      if (!error) return true;
+    } catch {
+      // Fallback
+    }
+    const idx = this.inMemoryFeedbacks.findIndex((f) => f.id === id);
+    if (idx !== -1) {
+      this.inMemoryFeedbacks.splice(idx, 1);
+      return true;
+    }
+    return false;
   }
 }
 

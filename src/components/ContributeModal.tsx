@@ -22,15 +22,15 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
   const [copied, setCopied] = useState(false);
   const [isQrZoomed, setIsQrZoomed] = useState(false);
 
-  // Privacy-friendly 8-digit UPI Number for UI exposure & manual entry
-  const upiNumber = '24021526';
-  
-  // Payee name & UPI ID (used strictly in direct background intent URI)
+  // Displayed/copyable masked UPI number (privacy-safe, never exposes phone number)
+  const upiDisplayNumber = '24021526';
+
+  // Payee name & actual UPI ID — used ONLY in background payment URI, never shown in UI
   const payeeName = 'PRATIK PANDA';
-  const upiInternalId = '8983647308.etb@icici';
-  
-  // Plain P2P UPI intent — strictly no orgid and no mc (avoids merchant check errors)
-  const plainP2PUpiUri = `upi://pay?pa=${encodeURIComponent(upiInternalId)}&pn=${encodeURIComponent(payeeName)}&cu=INR`;
+  const upiId = '8983647308.etb@icici';
+
+  // Plain P2P UPI intent — no mc, no orgid, am=0 signals personal/P2P transfer (avoids merchant check errors)
+  const plainP2PUpiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&cu=INR&am=0`;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -51,7 +51,7 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   const handleCopyUpiNumber = () => {
-    navigator.clipboard.writeText(upiNumber);
+    navigator.clipboard.writeText(upiDisplayNumber);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
@@ -141,14 +141,14 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
               </a>
             </div>
 
-            {/* Copyable UPI Number Strip (Privacy protected - shows official 8-digit UPI Number) */}
+            {/* Copyable UPI Number Strip (masked — privacy safe) */}
             <div className="w-full flex items-center justify-between bg-slate-900 border border-slate-700/80 rounded-xl px-3 sm:px-3.5 py-2.5 mt-1 gap-2">
               <div className="text-left min-w-0 flex-1">
                 <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 font-semibold block">
                   UPI NUMBER
                 </span>
                 <span className="text-sm font-mono font-bold text-cyan-300 block select-all tracking-wider">
-                  {upiNumber}
+                  {upiDisplayNumber}
                 </span>
               </div>
               <button
@@ -309,12 +309,12 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
                 {copied ? (
                   <>
                     <Check className="w-4 h-4 text-emerald-400" />
-                    <span>Copied UPI Number ({upiNumber})</span>
+                    <span>Copied UPI Number ({upiDisplayNumber})</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4" />
-                    <span>Copy UPI Number ({upiNumber})</span>
+                    <span>Copy UPI Number ({upiDisplayNumber})</span>
                   </>
                 )}
               </button>

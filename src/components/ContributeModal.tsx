@@ -9,8 +9,7 @@ import {
   Maximize2,
   ZoomIn,
   ZoomOut,
-  ExternalLink,
-  Smartphone
+  Share2
 } from 'lucide-react';
 
 interface ContributeModalProps {
@@ -54,6 +53,32 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
     navigator.clipboard.writeText(upiDisplayNumber);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleShareQr = async () => {
+    try {
+      const response = await fetch('/pay.png');
+      const blob = await response.blob();
+      const file = new File([blob], 'NexUP-UPI-QR.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'Pay via UPI — Support NexUP',
+          text: `Scan this QR or use UPI Number: ${upiDisplayNumber} to support NexUP by Pratik Panda`,
+          files: [file],
+        });
+      } else if (navigator.share) {
+        await navigator.share({
+          title: 'Pay via UPI — Support NexUP',
+          text: `Scan this QR or use UPI Number: ${upiDisplayNumber} to support NexUP by Pratik Panda`,
+          url: window.location.href,
+        });
+      } else {
+        navigator.clipboard.writeText(upiDisplayNumber);
+        alert('Sharing not supported on this device. UPI Number copied!');
+      }
+    } catch {
+      // User cancelled — do nothing
+    }
   };
 
   return (
@@ -129,16 +154,16 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
               </p>
             </div>
 
-            {/* Tap to Pay via Installed UPI App (Plain P2P Intent - No orgid / No mc) */}
+            {/* Share QR Button */}
             <div className="w-full pt-1">
-              <a
-                href={plainP2PUpiUri}
-                className="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 via-pink-600 to-rose-500 hover:from-rose-500 hover:to-pink-500 text-white font-bold text-xs shadow-lg shadow-rose-950/50 transition-all cursor-pointer"
+              <button
+                type="button"
+                onClick={handleShareQr}
+                className="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-600 via-sky-600 to-cyan-500 hover:from-cyan-500 hover:to-sky-500 text-white font-bold text-xs shadow-lg shadow-cyan-950/50 transition-all cursor-pointer"
               >
-                <Smartphone className="w-4 h-4" />
-                <span>Tap to Pay via Installed UPI App</span>
-                <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-              </a>
+                <Share2 className="w-4 h-4" />
+                <span>Share QR</span>
+              </button>
             </div>
 
             {/* Copyable UPI Number Strip (masked — privacy safe) */}
@@ -287,15 +312,16 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
               </p>
             </div>
 
-            {/* Direct Pay & Copy Buttons inside Lightbox */}
+            {/* Share QR & Copy Buttons inside Lightbox */}
             <div className="w-full space-y-2">
-              <a
-                href={plainP2PUpiUri}
-                className="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+              <button
+                type="button"
+                onClick={handleShareQr}
+                className="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-600 to-sky-600 hover:from-cyan-500 hover:to-sky-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
               >
-                <Smartphone className="w-4 h-4" />
-                <span>Open in Installed UPI App</span>
-              </a>
+                <Share2 className="w-4 h-4" />
+                <span>Share QR</span>
+              </button>
 
               <button
                 type="button"

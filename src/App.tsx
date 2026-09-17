@@ -746,8 +746,8 @@ export default function App() {
               </a>
             </span>
             <span className="text-slate-600 hidden sm:inline">·</span>
-            <span className="text-slate-300 font-medium">
-              Built &amp; maintained by <strong className="text-white font-bold">Pratik Panda</strong>
+            <span className="text-cyan-400 font-medium">
+              Built &amp; maintained by <strong className="text-cyan-300 font-bold">Pratik Panda</strong>
             </span>
             <span className="text-slate-600 hidden sm:inline">·</span>
             <button

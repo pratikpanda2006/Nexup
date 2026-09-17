@@ -728,16 +728,21 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer strictly matching Image 6 */}
-      <footer className="border-t border-slate-900 bg-[#020612] py-5 mt-auto text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs">
-          <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 tracking-normal font-sans">
-            <span className="text-slate-400">© 2026 NexUP. All rights reserved.</span>
-            <span className="text-slate-600 hidden sm:inline">·</span>
-            <span className="text-slate-400">
-              Built & maintained by <strong className="text-white font-bold">Pratik Panda</strong>
+      {/* Footer */}
+      <footer className="border-t border-slate-900/90 bg-[#020612] py-5 mt-auto text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center space-y-3 text-center">
+          {/* PRIMARY CENTER HIGHLIGHT: Built & Maintained by Pratik Panda */}
+          <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-950/70 via-indigo-950/80 to-purple-950/70 border border-blue-500/40 shadow-lg shadow-blue-950/50 hover:border-blue-400/70 transition-all">
+            <span className="text-xs text-slate-300 font-medium">Built &amp; maintained by</span>
+            <span className="text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-200 to-blue-400 tracking-wide font-sans">
+              Pratik Panda
             </span>
-            <span className="text-slate-600 hidden sm:inline">·</span>
+          </div>
+
+          {/* SECONDARY ROW: Rights, Reference, Feedback & Contribute */}
+          <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-xs text-slate-400 font-sans">
+            <span className="text-slate-500">© 2026 NexUP. All rights reserved.</span>
+            <span className="text-slate-700 hidden sm:inline">·</span>
             <span className="text-slate-400">
               Community reference:{' '}
               <a
@@ -749,14 +754,14 @@ export default function App() {
                 IIT Madras BS Research Hub
               </a>
             </span>
-            <span className="text-slate-600 hidden sm:inline">·</span>
+            <span className="text-slate-700 hidden sm:inline">·</span>
             <button
               onClick={() => setIsFeedbackOpen(true)}
               className="text-amber-400 hover:text-amber-300 font-medium underline underline-offset-4 transition-colors cursor-pointer"
             >
               Report Bug / Feedback
             </button>
-            <span className="text-slate-600 hidden sm:inline">·</span>
+            <span className="text-slate-700 hidden sm:inline">·</span>
             <button
               onClick={() => setIsContributeOpen(true)}
               className="text-rose-400 hover:text-rose-300 font-semibold underline underline-offset-4 transition-colors cursor-pointer inline-flex items-center space-x-1"
@@ -764,7 +769,7 @@ export default function App() {
               <Heart className="w-3.5 h-3.5 fill-rose-500/30 text-rose-400" />
               <span>Contribute / Support Us</span>
             </button>
-          </p>
+          </div>
         </div>
       </footer>
 

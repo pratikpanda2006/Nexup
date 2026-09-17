@@ -325,6 +325,17 @@ app.get('/api/admin/stats', async (req, res) => {
   });
 });
 
+// --- ADMIN PLATFORM ANALYTICS ---
+app.get('/api/admin/analytics', async (req, res) => {
+  try {
+    const analytics = await db.getPlatformAnalytics();
+    res.json(analytics);
+  } catch (err: any) {
+    console.error('Failed to get platform analytics:', err);
+    res.status(500).json({ error: 'Failed to retrieve analytics' });
+  }
+});
+
 // --- ADMIN AUTH & APPROVAL WORKFLOW ---
 app.post('/api/admin/auth/verify-email', async (req, res) => {
   const { email } = req.body;

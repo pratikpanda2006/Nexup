@@ -29,8 +29,8 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
   const payeeName = 'PRATIK PANDA';
   const upiInternalId = '8983647308.etb@icici';
   
-  // Plain P2P UPI intent — no orgid/mc, avoids "invalid merchant credentials" error
-  const exactUpiUri = `upi://pay?pa=${encodeURIComponent(upiInternalId)}&pn=${encodeURIComponent(payeeName)}&cu=INR`;
+  // Plain P2P UPI intent — strictly no orgid and no mc (avoids merchant check errors)
+  const plainP2PUpiUri = `upi://pay?pa=${encodeURIComponent(upiInternalId)}&pn=${encodeURIComponent(payeeName)}&cu=INR`;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -100,17 +100,7 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
             </button>
           </div>
 
-          {/* Heartfelt Community Message */}
-          <div className="bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 sm:p-4 text-xs text-slate-300 leading-relaxed space-y-2">
-            <p>
-              <strong className="text-white font-semibold">Hey Builder! 👋</strong> If you feel NexUP has helped you — whether by landing a hackathon prize, securing an internship, finding research grants, or simply saving hours tracking deadlines — please consider contributing whatever amount feels right to you!
-            </p>
-            <p className="text-slate-400">
-              NexUP is built by students for students, completely free and without any ads. Every single contribution directly funds real-time scraping, AI deadline tracking, and cloud server hosting. ❤️
-            </p>
-          </div>
-
-          {/* UPI QR Code Container with Click-to-Enlarge */}
+          {/* 1. FIRST: UPI QR Code Container with Click-to-Enlarge */}
           <div className="flex flex-col items-center bg-slate-950/90 border border-slate-800 rounded-2xl p-4 sm:p-5 text-center space-y-3 shadow-inner">
             <div 
               onClick={() => setIsQrZoomed(true)}
@@ -139,10 +129,10 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
               </p>
             </div>
 
-            {/* Tap to Pay via Installed UPI App (direct background intent) */}
+            {/* Tap to Pay via Installed UPI App (Plain P2P Intent - No orgid / No mc) */}
             <div className="w-full pt-1">
-              
-                href={exactUpiUri}
+              <a
+                href={plainP2PUpiUri}
                 className="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 via-pink-600 to-rose-500 hover:from-rose-500 hover:to-pink-500 text-white font-bold text-xs shadow-lg shadow-rose-950/50 transition-all cursor-pointer"
               >
                 <Smartphone className="w-4 h-4" />
@@ -185,27 +175,44 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
             </div>
           </div>
 
-          {/* Suggested Contribution Chips */}
+          {/* 2. BELOW QR: Support NexUP Community Message (Requested Format) */}
+          <div className="bg-slate-950/70 border border-slate-800/90 rounded-2xl p-4 text-xs text-slate-300 leading-relaxed space-y-2.5">
+            <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+              <span>Support NexUP</span>
+              <span className="text-rose-500">❤️</span>
+            </h4>
+            <p className="text-slate-300">
+              If NexUP has helped you discover an opportunity or save time, consider supporting its continued development with any amount you’re comfortable with.
+            </p>
+            <p className="text-slate-300">
+              NexUP is <strong className="text-white font-semibold">built by students, for students</strong>, and stays completely free and ad-free. Contributions help cover <strong className="text-white font-semibold">cloud hosting, real-time scraping, AI services, and maintenance</strong>.
+            </p>
+            <p className="text-slate-400 font-medium">
+              Every contribution helps keep NexUP running. Thank you! 🚀
+            </p>
+          </div>
+
+          {/* 3. Suggested Contribution Chips */}
           <div className="space-y-2">
             <span className="text-[10px] uppercase font-mono tracking-wider text-slate-500 font-bold block text-center">
               Suggested Tokens of Support
             </span>
-            <div className="grid grid-cols-4 gap-2 text-center text-xs">
+            <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center text-xs">
               <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-300">
                 <div className="font-bold text-white text-sm">₹30</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Chai ☕</div>
+                <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 font-medium">Scraping</div>
               </div>
               <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-300">
                 <div className="font-bold text-white text-sm">₹50</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Snack 🍕</div>
+                <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 font-medium">AI Engine</div>
               </div>
               <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-300">
                 <div className="font-bold text-white text-sm">₹100</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Server 🚀</div>
+                <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 font-medium">Server</div>
               </div>
               <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-300">
                 <div className="font-bold text-white text-sm">₹250</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Champion 🌟</div>
+                <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 font-medium">Maintenance</div>
               </div>
             </div>
             <p className="text-[11px] text-slate-400 text-center italic mt-1">
@@ -213,7 +220,7 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
             </p>
           </div>
 
-          {/* Footer actions */}
+          {/* 4. Footer actions */}
           <div className="pt-2 flex items-center justify-between border-t border-slate-800/80 text-xs">
             <div className="flex items-center space-x-1.5 text-slate-400 text-[11px]">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -282,8 +289,8 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
 
             {/* Direct Pay & Copy Buttons inside Lightbox */}
             <div className="w-full space-y-2">
-              
-                href={exactUpiUri}
+              <a
+                href={plainP2PUpiUri}
                 className="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
               >
                 <Smartphone className="w-4 h-4" />

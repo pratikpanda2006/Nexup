@@ -25,13 +25,12 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
   // Privacy-friendly 8-digit UPI Number for UI exposure & manual entry
   const upiNumber = '24021526';
   
-  // Payee name & ICICI EasyPay parameters (used strictly in direct background intent URI)
+  // Payee name & UPI ID (used strictly in direct background intent URI)
   const payeeName = 'PRATIK PANDA';
   const upiInternalId = '8983647308.etb@icici';
-  const orgId = '400011';
   
-  // Exact intent matching the official ICICI QR payload for direct app-to-app payments
-  const exactUpiUri = `upi://pay?pa=${encodeURIComponent(upiInternalId)}&pn=${encodeURIComponent(payeeName)}&cu=INR&orgid=${orgId}`;
+  // Plain P2P UPI intent — no orgid/mc, avoids "invalid merchant credentials" error
+  const exactUpiUri = `upi://pay?pa=${encodeURIComponent(upiInternalId)}&pn=${encodeURIComponent(payeeName)}&cu=INR`;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -142,7 +141,7 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
 
             {/* Tap to Pay via Installed UPI App (direct background intent) */}
             <div className="w-full pt-1">
-              <a
+              
                 href={exactUpiUri}
                 className="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 via-pink-600 to-rose-500 hover:from-rose-500 hover:to-pink-500 text-white font-bold text-xs shadow-lg shadow-rose-950/50 transition-all cursor-pointer"
               >
@@ -283,7 +282,7 @@ export const ContributeModal: React.FC<ContributeModalProps> = ({ isOpen, onClos
 
             {/* Direct Pay & Copy Buttons inside Lightbox */}
             <div className="w-full space-y-2">
-              <a
+              
                 href={exactUpiUri}
                 className="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
               >

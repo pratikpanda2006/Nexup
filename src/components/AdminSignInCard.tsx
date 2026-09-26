@@ -43,9 +43,9 @@ export const AdminSignInCard: React.FC<AdminSignInCardProps> = ({
   // Background authorization request & countdown state
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number>(600); // 10 mins = 600s
-  const [denialMessage, setDenialMessage] = useState<string>('u cant acess it');
+  const [denialMessage, setDenialMessage] = useState<string>('Administrator access request was not approved.');
   const [expiredMessage, setExpiredMessage] = useState<string>(
-    'henceforth not a authorised admin pls contact PRATIK'
+    'The authorization window has expired. Please submit a new request if needed.'
   );
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -71,11 +71,11 @@ export const AdminSignInCard: React.FC<AdminSignInCardProps> = ({
           onSuccess(data.user);
         } else if (data.status === 'rejected') {
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-          setDenialMessage(data.message || 'u cant acess it');
+          setDenialMessage(data.message || 'Administrator access request was not approved.');
           setStep('rejected');
         } else if (data.status === 'expired') {
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-          setExpiredMessage(data.message || 'henceforth not a authorised admin pls contact PRATIK');
+          setExpiredMessage(data.message || 'The authorization window has expired. Please submit a new request if needed.');
           setStep('expired');
         } else if (typeof data.remainingSeconds === 'number') {
           setRemainingSeconds(data.remainingSeconds);
@@ -555,17 +555,17 @@ export const AdminSignInCard: React.FC<AdminSignInCardProps> = ({
                 </p>
               </div>
 
-              {/* 10-Minute Countdown Ticker */}
+              {/* Administrative Review Window */}
               <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl max-w-xs mx-auto space-y-1">
                 <div className="flex items-center justify-center space-x-1.5 text-slate-400 text-xs">
-                  <Clock className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Approval Window:</span>
+                  <Clock className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Review Window:</span>
                 </div>
-                <div className="font-mono text-2xl font-bold text-amber-300 tracking-wider">
+                <div className="font-mono text-2xl font-bold text-slate-200 tracking-wider">
                   {formatTime(remainingSeconds)}
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Access expires automatically if not authorized within 10 minutes.
+                  Requests are reviewed by administrators.
                 </p>
               </div>
 
@@ -575,27 +575,27 @@ export const AdminSignInCard: React.FC<AdminSignInCardProps> = ({
                   onClick={handleReturnToEmail}
                   className="text-xs text-slate-400 hover:text-white underline underline-offset-4 cursor-pointer"
                 >
-                  Cancel and return to sign in
+                  Return to sign in
                 </button>
               </div>
             </div>
           )}
 
           {/* =========================================================================
-              VIEW 5: REJECTED ("u cant acess it")
+              VIEW 5: REJECTED
              ========================================================================= */}
           {step === 'rejected' && (
             <div className="text-center space-y-4 py-3 animate-in zoom-in-95 duration-150">
-              <div className="w-14 h-14 rounded-2xl bg-rose-950/80 border border-rose-800 text-rose-400 flex items-center justify-center mx-auto shadow-xl">
+              <div className="w-14 h-14 rounded-2xl bg-slate-950 border border-slate-800 text-slate-400 flex items-center justify-center mx-auto shadow-xl">
                 <ShieldAlert className="w-7 h-7" />
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-lg font-extrabold text-rose-400 tracking-tight">
-                  {denialMessage}
+                <h3 className="text-lg font-bold text-white tracking-tight">
+                  Access Not Authorized
                 </h3>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  Your administrator access request was reviewed and denied.
+                  {denialMessage}
                 </p>
               </div>
 
@@ -603,7 +603,7 @@ export const AdminSignInCard: React.FC<AdminSignInCardProps> = ({
                 <button
                   type="button"
                   onClick={handleReturnToEmail}
-                  className="w-full max-w-xs mx-auto py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-full shadow-lg transition-colors flex items-center justify-center space-x-2 cursor-pointer"
+                  className="w-full max-w-xs mx-auto py-2.5 bg-slate-800 hover:bg-slate-750 text-white font-bold text-xs rounded-full shadow-lg transition-colors flex items-center justify-center space-x-2 cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Return to Sign In</span>
@@ -613,20 +613,20 @@ export const AdminSignInCard: React.FC<AdminSignInCardProps> = ({
           )}
 
           {/* =========================================================================
-              VIEW 6: EXPIRED ("henceforth not a authorised admin pls contact PRATIK")
+              VIEW 6: EXPIRED
              ========================================================================= */}
           {step === 'expired' && (
             <div className="text-center space-y-4 py-3 animate-in zoom-in-95 duration-150">
-              <div className="w-14 h-14 rounded-2xl bg-amber-950/80 border border-amber-800 text-amber-400 flex items-center justify-center mx-auto shadow-xl">
+              <div className="w-14 h-14 rounded-2xl bg-slate-950 border border-slate-800 text-slate-400 flex items-center justify-center mx-auto shadow-xl">
                 <AlertTriangle className="w-7 h-7" />
               </div>
 
               <div className="space-y-1.5">
-                <h3 className="text-base font-extrabold text-amber-400 tracking-tight leading-snug">
-                  {expiredMessage}
+                <h3 className="text-base font-bold text-white tracking-tight leading-snug">
+                  Request Window Expired
                 </h3>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  The 10-minute administrative approval window has elapsed.
+                  {expiredMessage}
                 </p>
               </div>
 

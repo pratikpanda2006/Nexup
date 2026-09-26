@@ -16,8 +16,9 @@ import { AdminSignInCard } from './components/AdminSignInCard';
 import { ShareModal } from './components/ShareModal';
 import { FeedbackModal } from './components/FeedbackModal';
 import { ContributeModal } from './components/ContributeModal';
+import { LegalModal } from './components/LegalModal';
 import { User, Opportunity, NotificationItem, OpportunityCategory } from './types';
-import { CheckCircle2, AlertCircle, ArrowLeft, ShieldAlert, Bell, Share2, Heart } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ArrowLeft, ShieldAlert, Bell, Share2, Heart, Shield } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -43,6 +44,8 @@ export default function App() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isContributeOpen, setIsContributeOpen] = useState(false);
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState<'disclaimer' | 'privacy' | 'terms'>('disclaimer');
 
   // Toast notification
   const [toast, setToast] = useState<{ message: string; type?: 'success' | 'info' } | null>(null);
@@ -114,7 +117,8 @@ export default function App() {
       isSearchOpen ||
       isShareOpen ||
       isFeedbackOpen ||
-      isContributeOpen
+      isContributeOpen ||
+      isLegalOpen
     ) {
       setSelectedOpportunity(null);
       setReminderTarget(null);
@@ -126,6 +130,7 @@ export default function App() {
       setIsShareOpen(false);
       setIsFeedbackOpen(false);
       setIsContributeOpen(false);
+      setIsLegalOpen(false);
       window.history.replaceState({ tab: currentTab, modal: null }, '', `#${currentTab}`);
       return;
     }
@@ -606,6 +611,10 @@ export default function App() {
             }}
             onOpenAuth={handleOpenAuth}
             onOpenContribute={() => setIsContributeOpen(true)}
+            onOpenLegal={(tab) => {
+              setLegalTab(tab || 'disclaimer');
+              setIsLegalOpen(true);
+            }}
           />
         )}
 
@@ -729,8 +738,8 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-[#020612] py-5 mt-auto text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs">
+      <footer className="border-t border-slate-900 bg-[#020612] py-6 mt-auto text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs space-y-3">
           <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 tracking-normal font-sans">
             <span className="text-slate-400">© 2026 NexUP. All rights reserved.</span>
             <span className="text-slate-600 hidden sm:inline">·</span>
@@ -740,9 +749,10 @@ export default function App() {
                 href="https://chat.whatsapp.com/IythdNIQIgI4dUQ9GhGw7J"
                 target="_blank"
                 rel="noopener noreferrer"
+                title="Opens external WhatsApp Community group"
                 className="text-[#00E676] hover:text-emerald-300 font-medium underline underline-offset-4 transition-colors"
               >
-                IIT Madras BS Research Hub
+                IIT Madras BS Research Hub (External)
               </a>
             </span>
             <span className="text-slate-600 hidden sm:inline">·</span>
@@ -765,6 +775,43 @@ export default function App() {
               <span>Contribute / Support Us</span>
             </button>
           </p>
+
+          {/* Legal Compliance Links & Disclaimer */}
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-slate-500 border-t border-slate-900/80 pt-2.5">
+            <button
+              onClick={() => {
+                setLegalTab('disclaimer');
+                setIsLegalOpen(true);
+              }}
+              className="hover:text-slate-300 transition-colors cursor-pointer underline underline-offset-2"
+            >
+              Independent Disclaimer
+            </button>
+            <span>·</span>
+            <button
+              onClick={() => {
+                setLegalTab('privacy');
+                setIsLegalOpen(true);
+              }}
+              className="hover:text-slate-300 transition-colors cursor-pointer underline underline-offset-2"
+            >
+              Privacy Policy
+            </button>
+            <span>·</span>
+            <button
+              onClick={() => {
+                setLegalTab('terms');
+                setIsLegalOpen(true);
+              }}
+              className="hover:text-slate-300 transition-colors cursor-pointer underline underline-offset-2"
+            >
+              Terms of Service
+            </button>
+            <span>·</span>
+            <span className="text-slate-400">
+              NexUP is an independent educational directory. All trademarks belong to their respective owners.
+            </span>
+          </div>
         </div>
       </footer>
 
@@ -870,6 +917,13 @@ export default function App() {
       <ContributeModal
         isOpen={isContributeOpen}
         onClose={() => setIsContributeOpen(false)}
+      />
+
+      {/* 11. Transparency & Legal Modal (Privacy, Terms, Disclaimer) */}
+      <LegalModal
+        isOpen={isLegalOpen}
+        onClose={() => setIsLegalOpen(false)}
+        initialTab={legalTab}
       />
 
       {/* Global Toast Notification */}

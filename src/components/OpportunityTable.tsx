@@ -139,9 +139,9 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({
                       <a
                         href={op.officialUrl}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
-                        title="Visit Official Website"
+                        title="Visit Official Website (External site)"
                       >
                         <ExternalLink className="w-4 h-4" />
                       </a>
@@ -288,9 +288,9 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({
                   <a
                     href={op.officialUrl}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-800/70 border border-slate-700/60 transition-colors"
-                    title="Official site"
+                    title="Visit Official Website (External site)"
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>

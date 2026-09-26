@@ -19,7 +19,8 @@ import {
   Play,
   Eye,
   EyeOff,
-  Heart
+  Heart,
+  Shield
 } from 'lucide-react';
 import { NexUpLogo } from './NexUpLogo';
 import { User as UserType } from '../types';
@@ -32,6 +33,7 @@ interface LandingPageProps {
   onSignInAsAdmin?: (adminUser?: UserType) => void;
   onOpenAuth?: () => void;
   onOpenContribute?: () => void;
+  onOpenLegal?: (tab?: 'privacy' | 'terms' | 'disclaimer') => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ 
@@ -40,9 +42,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onSignInAsStudent,
   onSignInAsAdmin,
   onOpenAuth,
-  onOpenContribute
+  onOpenContribute,
+  onOpenLegal
 }) => {
-  // Navigation step in landing flow: 'welcome' (Image 2) | 'signin' (Image 3) | 'showcase'
+  // Navigation step in landing flow: 'welcome' | 'signin' | 'showcase'
   const [step, setStep] = useState<'welcome' | 'signin' | 'showcase'>('welcome');
   
   // Selected role for sign-in: 'student' | 'admin'
@@ -51,17 +54,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Sign-in form fields (starts empty with placeholders per user request)
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
 
   // When clicking role buttons on Welcome screen:
   const handleSelectRole = (role: 'student' | 'admin') => {
     setSelectedRole(role);
-    // Reset fields so they show placeholders instead of pre-filled values
     setUsername('');
     setEmail('');
-    setPassword('');
     setStep('signin');
   };
 
@@ -262,12 +261,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Quick guest explorer & contribute links */}
-          <div className="mt-8 pt-4 border-t border-slate-850/80 w-full max-w-xs mx-auto flex flex-col items-center space-y-2.5">
+          <div className="mt-8 pt-4 border-t border-slate-850/80 w-full max-w-sm mx-auto flex flex-col items-center space-y-2.5">
             <button
               onClick={() => onExplore()}
-              className="inline-flex items-center space-x-1.5 text-xs text-slate-400 hover:text-blue-400 transition-colors cursor-pointer"
+              className="inline-flex items-center space-x-1.5 text-xs text-slate-300 hover:text-blue-400 font-medium transition-colors cursor-pointer"
             >
-              <span>Browse Live Opportunity Catalog</span>
+              <span>Browse Live Opportunity Catalog (No Sign-in Required)</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
             {onOpenContribute && (
@@ -280,6 +279,40 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <span>Support &amp; Contribute to NexUP</span>
               </button>
             )}
+
+            {/* Independent Platform Disclaimer & Legal Links */}
+            <div className="pt-3 border-t border-slate-900 w-full text-center space-y-2">
+              <p className="text-[11px] text-slate-400 leading-normal max-w-md mx-auto">
+                NexUP is an open, student-curated educational discovery directory. All trademarks, program titles, and brand logos belong to their respective copyright holders and are used solely for educational reference.
+              </p>
+              {onOpenLegal && (
+                <div className="flex items-center justify-center space-x-3 text-[11px] text-slate-400">
+                  <button
+                    type="button"
+                    onClick={() => onOpenLegal('disclaimer')}
+                    className="hover:text-blue-400 transition-colors cursor-pointer underline underline-offset-2"
+                  >
+                    Disclaimer
+                  </button>
+                  <span>•</span>
+                  <button
+                    type="button"
+                    onClick={() => onOpenLegal('privacy')}
+                    className="hover:text-blue-400 transition-colors cursor-pointer underline underline-offset-2"
+                  >
+                    Privacy Policy
+                  </button>
+                  <span>•</span>
+                  <button
+                    type="button"
+                    onClick={() => onOpenLegal('terms')}
+                    className="hover:text-blue-400 transition-colors cursor-pointer underline underline-offset-2"
+                  >
+                    Terms of Service
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -334,20 +367,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <div>
                   <h3 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-                    {isSignUpMode ? 'Create Student Account' : 'Sign In as Student'}
+                    Student Portal Access
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {isSignUpMode ? 'Register to personalize your tracking' : 'Enter your email & password to continue'}
+                    Enter your name and email to personalize tracking &amp; reminders
                   </p>
                 </div>
               </div>
 
               {/* Form */}
               <form onSubmit={handleSignInSubmit} className="space-y-4">
-                {/* 1. USERNAME */}
+                {/* 1. USERNAME / DISPLAY NAME */}
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold">
-                    USERNAME
+                    NAME / USERNAME
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -367,7 +400,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 {/* 2. EMAIL */}
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold">
-                    EMAIL
+                    STUDENT EMAIL
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -378,94 +411,53 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. user@gmail.com"
+                      placeholder="e.g. student@college.edu"
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/80 text-white font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
                     />
                   </div>
                 </div>
 
-                {/* 3. PASSWORD */}
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold">
-                    PASSWORD
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      className="w-full pl-10 pr-10 py-2.5 bg-slate-950/80 border border-slate-700/80 text-white font-medium rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+                {/* Privacy & Trust Badge */}
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400 flex items-center space-x-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>100% Free &amp; Open directory. We never ask for or store passwords.</span>
                 </div>
 
-                {/* Quick Auto-Fill helper badge */}
-                <div className="pt-1 flex items-center justify-between text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUsername('PRATIK');
-                      setEmail('user@gmail.com');
-                      setPassword('student2026');
-                    }}
-                    className="text-[11px] text-blue-400 hover:text-blue-300 font-medium underline cursor-pointer"
-                  >
-                    Quick-fill Student Credentials
-                  </button>
-
-                  <span className="text-[10px] text-slate-500">
-                    Student Privileges
-                  </span>
-                </div>
-
-                {/* SIGN IN BUTTON */}
-                <div className="pt-3">
+                {/* ENTER BUTTON */}
+                <div className="pt-2">
                   <button
                     type="submit"
                     className="w-full py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/20 transition-all cursor-pointer transform active:scale-[0.99] flex items-center justify-center space-x-2"
                   >
-                    <span>{isSignUpMode ? 'Create Account & Continue' : 'Sign In'}</span>
+                    <span>Enter Student Portal</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </form>
 
-              {/* Bottom toggle */}
-              <div className="text-center pt-2 text-xs text-slate-400">
-                {isSignUpMode ? (
-                  <p>
-                    Already have an account?{' '}
+              {/* Bottom transparency notice */}
+              <div className="text-center pt-1 text-xs text-slate-500 space-y-1.5">
+                <p>
+                  Browse opportunities freely without any subscription fees.
+                </p>
+                {onOpenLegal && (
+                  <div className="flex items-center justify-center space-x-2 text-[11px] text-slate-400">
                     <button
                       type="button"
-                      onClick={() => setIsSignUpMode(false)}
-                      className="text-blue-400 hover:text-blue-300 font-bold ml-1 cursor-pointer"
+                      onClick={() => onOpenLegal('privacy')}
+                      className="hover:text-blue-400 underline underline-offset-2 cursor-pointer"
                     >
-                      Sign In
+                      Privacy Policy
                     </button>
-                  </p>
-                ) : (
-                  <p>
-                    Need an account?{' '}
+                    <span>•</span>
                     <button
                       type="button"
-                      onClick={() => setIsSignUpMode(true)}
-                      className="text-blue-400 hover:text-blue-300 font-bold ml-1 cursor-pointer"
+                      onClick={() => onOpenLegal('disclaimer')}
+                      className="hover:text-blue-400 underline underline-offset-2 cursor-pointer"
                     >
-                      Create Account
+                      Platform Disclaimer
                     </button>
-                  </p>
+                  </div>
                 )}
               </div>
             </div>

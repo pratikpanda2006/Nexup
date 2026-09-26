@@ -163,7 +163,7 @@ export const AdminManagementPanel: React.FC<AdminManagementPanelProps> = ({
       if (data.success) {
         setFeedback({ 
           type: 'success', 
-          message: 'Access request rejected. Requester will see "u cant acess it" notification.' 
+          message: 'Access request has been rejected.' 
         });
         loadData();
         if (onRefreshStats) onRefreshStats();
@@ -450,7 +450,7 @@ export const AdminManagementPanel: React.FC<AdminManagementPanelProps> = ({
                     <button
                       onClick={() => handleRejectRequest(req.id)}
                       className="px-3 py-1.5 bg-rose-600/80 hover:bg-rose-600 text-rose-100 rounded-lg font-bold flex items-center space-x-1 transition-colors"
-                      title="User will see 'u cant acess it' message"
+                      title="Decline access request"
                     >
                       <X className="w-3.5 h-3.5" />
                       <span>Reject</span>

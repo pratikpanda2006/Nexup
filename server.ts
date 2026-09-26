@@ -451,11 +451,11 @@ app.get('/api/admin/auth/status', async (req, res) => {
   }
 
   if (reqItem.status === 'rejected') {
-    return res.json({ status: 'rejected', message: 'u cant acess it' });
+    return res.json({ status: 'rejected', message: 'Administrator access request was not approved.' });
   }
 
   if (reqItem.status === 'expired') {
-    return res.json({ status: 'expired', message: 'henceforth not a authorised admin pls contact PRATIK' });
+    return res.json({ status: 'expired', message: 'Access request has expired. Please submit a new request if needed.' });
   }
 
   const remainingSeconds = Math.max(0, Math.round((new Date(reqItem.expiresAt).getTime() - Date.now()) / 1000));

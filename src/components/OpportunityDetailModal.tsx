@@ -390,9 +390,10 @@ export const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
               href={opportunity.officialUrl}
               target="_blank"
               rel="noopener noreferrer"
+              title="Opens external organization website"
               className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-sm shadow-blue-500/20 transition-colors"
             >
-              <span>Visit Official Website</span>
+              <span>Visit Official Website (External)</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>

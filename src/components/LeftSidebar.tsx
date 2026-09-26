@@ -478,12 +478,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                 href="https://chat.whatsapp.com/IythdNIQIgI4dUQ9GhGw7J"
                 target="_blank"
                 rel="noopener noreferrer"
+                title="Opens external WhatsApp Community group"
                 onClick={() => setIsMenuOpen(false)}
                 className="w-full px-4 py-2.5 flex items-center justify-between text-slate-200 hover:bg-[#2B2D31] hover:text-white transition-colors text-left"
               >
                 <div className="flex items-center space-x-3">
                   <HelpCircle className="w-4 h-4 text-slate-300 shrink-0" />
-                  <span>Help & Community</span>
+                  <span>Help & Community (External)</span>
                 </div>
                 <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
               </a>
@@ -801,12 +802,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
               href="https://chat.whatsapp.com/IythdNIQIgI4dUQ9GhGw7J"
               target="_blank"
               rel="noopener noreferrer"
+              title="Opens external WhatsApp Community group"
               onClick={() => setIsMobileMenuOpen(false)}
               className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-200 text-xs font-medium transition-all"
             >
               <div className="flex items-center space-x-2.5">
                 <HelpCircle className="w-4 h-4 text-emerald-400" />
-                <span>Community WhatsApp</span>
+                <span>Community WhatsApp (External)</span>
               </div>
               <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
             </a>

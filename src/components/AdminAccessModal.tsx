@@ -42,9 +42,9 @@ export const AdminAccessModal: React.FC<AdminAccessModalProps> = ({
   // Background authorization request & countdown state
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number>(600); // 10 minutes = 600s
-  const [denialMessage, setDenialMessage] = useState<string>('u cant acess it');
+  const [denialMessage, setDenialMessage] = useState<string>('Administrator access request was not approved.');
   const [expiredMessage, setExpiredMessage] = useState<string>(
-    'henceforth not a authorised admin pls contact PRATIK'
+    'The authorization window has expired. Please submit a new request if needed.'
   );
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -86,11 +86,11 @@ export const AdminAccessModal: React.FC<AdminAccessModalProps> = ({
           onClose();
         } else if (data.status === 'rejected') {
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-          setDenialMessage(data.message || 'u cant acess it');
+          setDenialMessage(data.message || 'Administrator access request was not approved.');
           setStep('rejected');
         } else if (data.status === 'expired') {
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-          setExpiredMessage(data.message || 'henceforth not a authorised admin pls contact PRATIK');
+          setExpiredMessage(data.message || 'The authorization window has expired. Please submit a new request if needed.');
           setStep('expired');
         } else if (typeof data.remainingSeconds === 'number') {
           setRemainingSeconds(data.remainingSeconds);
@@ -505,19 +505,19 @@ export const AdminAccessModal: React.FC<AdminAccessModalProps> = ({
             </div>
           )}
 
-          {/* STEP 5: REJECTED ("u cant acess it") */}
+          {/* STEP 5: REJECTED */}
           {step === 'rejected' && (
             <div className="text-center space-y-4 py-3 animate-in zoom-in-95 duration-150">
-              <div className="w-14 h-14 rounded-2xl bg-rose-950/80 border border-rose-800 text-rose-400 flex items-center justify-center mx-auto shadow-xl">
+              <div className="w-14 h-14 rounded-2xl bg-slate-950 border border-slate-800 text-slate-400 flex items-center justify-center mx-auto shadow-xl">
                 <ShieldAlert className="w-7 h-7" />
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-lg font-extrabold text-rose-400 tracking-tight">
-                  {denialMessage}
+                <h3 className="text-lg font-bold text-white tracking-tight">
+                  Access Not Authorized
                 </h3>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  Your administrator access request was reviewed and denied.
+                  {denialMessage}
                 </p>
               </div>
 
@@ -525,7 +525,7 @@ export const AdminAccessModal: React.FC<AdminAccessModalProps> = ({
                 <button
                   type="button"
                   onClick={handleReturnToEmail}
-                  className="w-full max-w-xs mx-auto py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-lg transition-colors flex items-center justify-center space-x-2"
+                  className="w-full max-w-xs mx-auto py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl shadow-lg transition-colors flex items-center justify-center space-x-2"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Return to Sign In</span>
@@ -534,19 +534,19 @@ export const AdminAccessModal: React.FC<AdminAccessModalProps> = ({
             </div>
           )}
 
-          {/* STEP 6: EXPIRED ("henceforth not a authorised admin pls contact PRATIK") */}
+          {/* STEP 6: EXPIRED */}
           {step === 'expired' && (
             <div className="text-center space-y-4 py-3 animate-in zoom-in-95 duration-150">
-              <div className="w-14 h-14 rounded-2xl bg-amber-950/80 border border-amber-800 text-amber-400 flex items-center justify-center mx-auto shadow-xl">
+              <div className="w-14 h-14 rounded-2xl bg-slate-950 border border-slate-800 text-slate-400 flex items-center justify-center mx-auto shadow-xl">
                 <AlertTriangle className="w-7 h-7" />
               </div>
 
               <div className="space-y-1.5">
-                <h3 className="text-base font-extrabold text-amber-400 tracking-tight leading-snug">
-                  {expiredMessage}
+                <h3 className="text-base font-bold text-white tracking-tight leading-snug">
+                  Request Window Expired
                 </h3>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  The 10-minute administrative approval window has elapsed.
+                  {expiredMessage}
                 </p>
               </div>
 
